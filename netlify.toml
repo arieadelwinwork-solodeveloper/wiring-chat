@@ -4,6 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # VITE_* & Supabase anon key sengaja ada di bundle frontend (public by design)
+  SECRETS_SCAN_OMIT_KEYS = "VITE_SUPABASE_URL,VITE_SUPABASE_ANON_KEY,VITE_API_URL,VITE_OAPPS_OAUTH_PROVIDER,VITE_USE_API"
 
 # SPA — React Router
 [[redirects]]
