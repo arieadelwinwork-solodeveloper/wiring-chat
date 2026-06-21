@@ -1,0 +1,65 @@
+.swipe-delete__track {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.swipe-delete__track--dragging {
+  cursor: grabbing;
+}
+
+.swipe-delete__action {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #ff3b30;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+
+.swipe-delete__action--visible {
+  opacity: 1;
+}
+
+.swipe-delete__content {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.swipe-delete__content--dragging {
+  transition: none;
+}
+
+.swipe-delete__row--removing {
+  animation: swipe-delete-out 0.2s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes swipe-delete-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+    max-height: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+.swipe-delete__icon {
+  flex-shrink: 0;
+}

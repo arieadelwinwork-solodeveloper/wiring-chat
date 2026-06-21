@@ -1,0 +1,29 @@
+---
+description: Backend security — baca PRD Security sebelum generate API, Supabase, auth, atau deploy
+globs: **/*.sql,**/server/**,**/api/**,**/routes/**,**/*middleware*
+alwaysApply: false
+---
+
+# Backend Security (Wiring)
+
+Saat generate atau review kode **backend, API, Supabase, auth, AI endpoint, atau deploy**, baca dan ikuti:
+
+`docs/Security_PRD_Origami_OLaundry.md`
+
+Jika fitur yang diminta bentrok dengan security requirement, **prioritaskan security**. Tanya user jika ada keputusan ambigu.
+
+## Wajib setiap generate backend
+
+- Secrets hanya di `.env`; jangan hardcode; pastikan `.env` ada di `.gitignore`
+- Auth middleware + validasi JWT Supabase di semua protected route
+- Supabase RLS aktif; buat policy per tabel baru (`auth.uid() = user_id`)
+- Query parameterized (Supabase client); tanpa string concatenation SQL
+- Rate limiting; panggilan AI (Deepseek/Anthropic) **hanya** lewat backend Node.js
+- Helmet.js + validasi input Zod di route POST/PUT
+- Error ke user generik (`Terjadi kesalahan sistem`); log detail hanya di server
+- XSS: DOMPurify untuk user content; jangan `innerHTML` dengan input user
+- AI: system prompt role `system` terpisah, filter prompt injection, validate output
+
+## Prioritas
+
+Convenient vs secure → **selalu pilih secure**.

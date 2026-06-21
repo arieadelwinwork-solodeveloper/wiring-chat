@@ -1,0 +1,68 @@
+.sky-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.sky-bg__gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    165deg,
+    #00aff0 0%,
+    #4ec5f5 38%,
+    #a8e4ff 72%,
+    #e8f7ff 100%
+  );
+}
+
+.sky-bg__layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.sky-bg__cloud {
+  position: absolute;
+  left: 0;
+  height: auto;
+  will-change: transform;
+  animation-name: drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  filter: drop-shadow(0 4px 14px rgba(255, 255, 255, 0.25));
+}
+
+/* Lapisan belakang — jauh, kecil, tipis, sangat lambat */
+.sky-bg__layer--back .sky-bg__cloud {
+  width: clamp(72px, 11vw, 140px);
+  opacity: 0.3;
+  animation-duration: 120s;
+}
+
+/* Lapisan tengah — sedang */
+.sky-bg__layer--mid .sky-bg__cloud {
+  width: clamp(130px, 19vw, 240px);
+  opacity: 0.6;
+  animation-duration: 80s;
+  filter: drop-shadow(0 6px 16px rgba(255, 255, 255, 0.32));
+}
+
+/* Lapisan depan — dekat, besar, tebal */
+.sky-bg__layer--front .sky-bg__cloud {
+  width: clamp(200px, 30vw, 380px);
+  opacity: 0.9;
+  animation-duration: 45s;
+  filter: drop-shadow(0 8px 20px rgba(255, 255, 255, 0.45));
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(-100vw);
+  }
+  to {
+    transform: translateX(100vw);
+  }
+}

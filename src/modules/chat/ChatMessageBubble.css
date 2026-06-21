@@ -1,0 +1,25 @@
+.chat-message--selectable {
+  cursor: pointer;
+}
+
+.chat-message--selectable .chat-message__bubble {
+  cursor: pointer;
+}
+
+.chat-message--selected .chat-message__bubble,
+.chat-message__bubble--selected {
+  box-shadow: 0 0 0 2px #007aff, 0 2px 8px rgba(0, 122, 255, 0.2);
+}
+
+.chat-message--selectable.chat-message--own .chat-message__bubble--selected,
+.chat-message--selected.chat-message--own .chat-message__bubble {
+  box-shadow: 0 0 0 2px #64b5ff, 0 2px 8px rgba(0, 122, 255, 0.25);
+}
+
+.chat-messages--selection-mode {
+  user-select: none;
+}
+
+.chat-messages--selection-mode .chat-message__bubble {
+  touch-action: manipulation;
+}

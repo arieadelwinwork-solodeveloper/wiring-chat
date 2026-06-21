@@ -1,0 +1,21 @@
+.chat-room-list__item {
+  list-style: none;
+}
+
+.swipe-delete__track--room {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.swipe-delete__track--room .swipe-delete__action {
+  border-radius: 10px;
+}
+
+.swipe-delete__content--room.chat-room-item {
+  width: 100%;
+  cursor: grab;
+}
+
+.swipe-delete__content--room.chat-room-item:active {
+  cursor: grabbing;
+}

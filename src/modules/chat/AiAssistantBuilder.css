@@ -1,0 +1,161 @@
+.ai-assistant-builder__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.faq-bot-field__select {
+  cursor: pointer;
+  background: #ffffff;
+  color: #1d1d1f;
+}
+
+.ai-knowledge-upload {
+  gap: 10px;
+}
+
+.ai-knowledge-dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 28px 24px;
+  border: 2px dashed #c7c7cc;
+  border-radius: 14px;
+  background: #fafafa;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-knowledge-dropzone:hover {
+  border-color: #0a2540;
+  background: #f5f8fb;
+}
+
+.ai-knowledge-dropzone--active {
+  border-color: #0a2540;
+  background: #eef3f8;
+  box-shadow: 0 0 0 4px rgba(10, 37, 64, 0.08);
+}
+
+.ai-knowledge-dropzone__input {
+  display: none;
+}
+
+.ai-knowledge-dropzone__icon {
+  color: #86868b;
+  margin-bottom: 12px;
+}
+
+.ai-knowledge-dropzone--active .ai-knowledge-dropzone__icon,
+.ai-knowledge-dropzone:hover .ai-knowledge-dropzone__icon {
+  color: #0a2540;
+}
+
+.ai-knowledge-dropzone__title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.ai-knowledge-dropzone__subtitle {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: #86868b;
+}
+
+.ai-knowledge-dropzone__formats {
+  margin: 0;
+  font-size: 12px;
+  color: #aeaeb2;
+}
+
+.ai-knowledge-file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-knowledge-file-list__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e8e8ed;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.ai-knowledge-file-list__badge {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.ai-knowledge-file-list__badge--word {
+  background: #dce8f4;
+  color: #0a2540;
+}
+
+.ai-knowledge-file-list__badge--excel {
+  background: #e4f5e8;
+  color: #1b7a3d;
+}
+
+.ai-knowledge-file-list__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.ai-knowledge-file-list__name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d1d1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-knowledge-file-list__meta {
+  font-size: 12px;
+  color: #86868b;
+}
+
+.ai-knowledge-file-list__remove {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: #f5f5f7;
+  color: #86868b;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-knowledge-file-list__remove:hover {
+  color: #ff3b30;
+  background: #fff0ef;
+}
