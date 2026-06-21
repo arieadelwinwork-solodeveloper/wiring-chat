@@ -129,8 +129,8 @@ export default function Login() {
       return;
     }
 
-    if (registerPassword.length < 6) {
-      setRegisterError('Password minimal 6 karakter.');
+    if (registerPassword.length < 8) {
+      setRegisterError('Password minimal 8 karakter.');
       return;
     }
 

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { getAuthErrorMessage } from '../lib/authErrors';
 import { isSupabaseConfigured, supabase, syncAccessToken } from '../lib/supabase';
 
 const AuthContext = createContext(null);
@@ -46,7 +47,9 @@ export function AuthProvider({ children }) {
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      if (error) {
+        throw new Error(getAuthErrorMessage(error, 'Login gagal. Periksa Gmail dan password.'));
+      }
 
       syncAccessToken(data.session);
       setSession(data.session);
@@ -58,8 +61,21 @@ export function AuthProvider({ children }) {
         throw new Error('Supabase belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY.');
       }
 
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/chat`,
+        },
+      });
+
+      if (error) {
+        throw new Error(getAuthErrorMessage(error, 'Pendaftaran gagal. Coba Gmail lain.'));
+      }
+
+      if (data.user && data.user.identities?.length === 0) {
+        throw new Error('Email sudah terdaftar. Silakan masuk.');
+      }
 
       if (data.session) {
         syncAccessToken(data.session);
@@ -82,7 +98,9 @@ export function AuthProvider({ children }) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(getAuthErrorMessage(error, 'Gagal masuk dengan akun O\'Apps.'));
+      }
     },
 
     async signOut() {
