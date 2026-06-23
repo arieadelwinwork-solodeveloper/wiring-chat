@@ -396,20 +396,46 @@ CREATE POLICY "Users can send staff messages"
 -- Trigger: auto-create profile on signup
 -- ------------------------------------------------------------
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  profile_name TEXT;
+  profile_role user_role := 'user';
+  meta_role TEXT;
 BEGIN
-  INSERT INTO user_profiles (id, display_name, avatar_color, role)
+  profile_name := COALESCE(
+    NULLIF(trim(NEW.raw_user_meta_data->>'display_name'), ''),
+    NULLIF(trim(split_part(NEW.email, '@', 1)), ''),
+    'Pengguna'
+  );
+
+  meta_role := NEW.raw_user_meta_data->>'role';
+  IF meta_role IN ('owner', 'user') THEN
+    profile_role := meta_role::user_role;
+  END IF;
+
+  INSERT INTO public.user_profiles (id, display_name, avatar_color, role)
   VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'avatar_color', '#0a2540'),
-    COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'user')
-  );
+    profile_name,
+    COALESCE(NULLIF(trim(NEW.raw_user_meta_data->>'avatar_color'), ''), '#0a2540'),
+    profile_role
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    display_name = EXCLUDED.display_name,
+    updated_at = now();
+
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+GRANT USAGE ON SCHEMA public TO postgres, supabase_auth_admin;
+GRANT ALL ON TABLE public.user_profiles TO postgres, supabase_auth_admin;
