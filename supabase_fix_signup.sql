@@ -40,12 +40,13 @@ BEGIN
     profile_role := meta_role::public.user_role;
   END IF;
 
-  INSERT INTO public.user_profiles (id, display_name, avatar_color, role)
+  INSERT INTO public.user_profiles (id, display_name, avatar_color, role, nomor_id)
   VALUES (
     NEW.id,
     profile_name,
     COALESCE(NULLIF(trim(NEW.raw_user_meta_data->>'avatar_color'), ''), '#0a2540'),
-    profile_role
+    profile_role,
+    'USR-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6))
   )
   ON CONFLICT (id) DO UPDATE SET
     display_name = EXCLUDED.display_name,

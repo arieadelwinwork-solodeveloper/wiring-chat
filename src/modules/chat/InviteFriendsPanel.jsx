@@ -65,7 +65,7 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
 
       <form className="invite-friends-form__body" onSubmit={handleSubmit}>
         <p className="faq-bot-flow-hint">
-          Tambahkan kontak baru dengan mengisi data berikut.
+          Minta ID teman (contoh USR-A1B2C3) dari profil mereka di sidebar, lalu isi di bawah.
         </p>
 
         <label className="invite-friends__field">

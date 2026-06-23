@@ -33,6 +33,7 @@ import './MessageSelectionBar.css';
 import { formatMessagesForCopy } from './messageFormat';
 import './InternalChatBoard.css';
 import { useChatBackend } from '../../hooks/useChatBackend';
+import { getOrCreateLocalNomorId } from '../../lib/nomorId';
 import {
   chatApi,
   mapAiPayloadFromDraft,
@@ -46,6 +47,7 @@ const DEFAULT_USER = {
   name: 'Pengguna',
   avatarColor: '#0a2540',
   initials: 'PG',
+  nomorId: null,
 };
 
 const DEFAULT_BOTS = {
@@ -226,6 +228,11 @@ function UserProfileMenu({
         </div>
         <div className="chat-user-profile__meta">
           <span className="chat-user-profile__name">{user.name}</span>
+          {user.nomorId && (
+            <span className="chat-user-profile__id" title="Bagikan ID ini agar teman bisa mengundang Anda">
+              {user.nomorId}
+            </span>
+          )}
         </div>
         {isOwner ? (
           <span className="chat-user-profile__badge chat-user-profile__badge--owner">Owner</span>
@@ -318,7 +325,16 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         name: backend.profile.name,
         avatarColor: backend.profile.avatarColor,
         initials: backend.profile.initials ?? getInitials(backend.profile.name),
+        nomorId: backend.profile.nomorId ?? null,
       });
+      return;
+    }
+
+    if (!backend.useApi) {
+      setCurrentUser((prev) => ({
+        ...prev,
+        nomorId: getOrCreateLocalNomorId(),
+      }));
     }
   }, [backend.useApi, backend.profile]);
 

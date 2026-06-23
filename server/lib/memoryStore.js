@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { getInitials, pickAvatarColor, messageToClient } from './formatters.js';
+import { generateNomorId } from './nomorId.js';
 
 const store = {
   profiles: new Map(),
@@ -18,9 +19,16 @@ function ensureDevProfile() {
       display_name: 'Dev User',
       avatar_color: '#0a2540',
       role: 'owner',
-      nomor_id: null,
+      nomor_id: generateNomorId(),
     });
   }
+}
+
+function ensureNomorId(profile, userId) {
+  if (profile.nomor_id) return profile;
+  const next = { ...profile, id: userId, nomor_id: generateNomorId() };
+  store.profiles.set(userId, next);
+  return next;
 }
 
 export function isMemoryMode() {
@@ -29,7 +37,8 @@ export function isMemoryMode() {
 
 export function memoryGetProfile(userId) {
   ensureDevProfile();
-  return store.profiles.get(userId) ?? store.profiles.get(DEV_USER);
+  const profile = store.profiles.get(userId) ?? store.profiles.get(DEV_USER);
+  return ensureNomorId(profile, userId);
 }
 
 export function memoryUpdateProfile(userId, updates) {
