@@ -26,7 +26,7 @@ export function InviteFriendsTrigger({ onClick }) {
   return (
     <button type="button" className="invite-friends__trigger" onClick={onClick}>
       <span className="invite-friends__trigger-icon">+</span>
-      <span>Mengundang teman</span>
+      <span>Memulai percakapan</span>
     </button>
   );
 }
@@ -35,6 +35,7 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
   const [draft, setDraft] = useState(createContactDraft);
   const [lookupState, setLookupState] = useState('idle');
   const [lookupError, setLookupError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   function updateDraft(field, value) {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -66,7 +67,9 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
             ...prev,
             nomorId: user.nomorId ?? nomorId,
             nama: user.nama,
-            status: user.role ?? prev.status,
+            status: ['owner', 'user', 'bot', 'ai_assistant'].includes(user.role)
+              ? user.role
+              : 'user',
           }));
           setLookupState('found');
         })
@@ -83,27 +86,38 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
     };
   }, [draft.nomorId]);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    if (!draft.nama.trim() || !draft.nomorId.trim()) return;
+    if (!draft.nama.trim() || !draft.nomorId.trim() || submitting) return;
 
-    onAddContact({
-      id: `contact-${Date.now()}`,
-      nama: draft.nama.trim(),
-      nomorId: draft.nomorId.trim().toUpperCase(),
-      status: draft.status,
-    });
-
-    onClose();
+    setSubmitting(true);
+    try {
+      await onAddContact({
+        id: `contact-${Date.now()}`,
+        nama: draft.nama.trim(),
+        nomorId: draft.nomorId.trim().toUpperCase(),
+        status: draft.status,
+      });
+    } catch {
+      // Parent shows error notice
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const nomorIdHint = lookupState === 'loading'
     ? 'Mencari pengguna...'
     : lookupState === 'found'
-      ? `Ditemukan: ${draft.nama}`
+      ? `Ditemukan: ${draft.nama} · ${getContactStatusLabel(draft.status)}`
       : lookupState === 'not_found'
         ? lookupError
         : '';
+
+  const requiresLookup = chatApi.isEnabled();
+  const canSubmit = draft.nama.trim()
+    && draft.nomorId.trim()
+    && !submitting
+    && (!requiresLookup || lookupState === 'found');
 
   return (
     <div className="invite-friends-form">
@@ -116,12 +130,12 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
         >
           &lt;
         </button>
-        <h2 className="invite-friends-form__title">Mengundang teman</h2>
+        <h2 className="invite-friends-form__title">Memulai percakapan</h2>
       </header>
 
       <form className="invite-friends-form__body" onSubmit={handleSubmit}>
         <p className="faq-bot-flow-hint">
-          Minta ID teman (contoh USR-A1B2C3) dari profil mereka di sidebar. Nama akan terisi otomatis.
+          Masukkan ID pengguna (contoh USR-A1B2C3). Nama dan status akun akan terisi otomatis.
         </p>
 
         <label className="invite-friends__field">
@@ -157,36 +171,28 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
           />
         </label>
 
-        <label className="invite-friends__field">
-          <span className="invite-friends__label">Status akun</span>
-          <select
-            className="invite-friends__input invite-friends__select"
-            value={draft.status}
-            onChange={(e) => updateDraft('status', e.target.value)}
-          >
-            {CONTACT_STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {lookupState === 'found' && (
+          <label className="invite-friends__field">
+            <span className="invite-friends__label">Status akun</span>
+            <input
+              type="text"
+              className="invite-friends__input"
+              value={getContactStatusLabel(draft.status)}
+              readOnly
+            />
+          </label>
+        )}
 
         <div className="invite-friends__actions">
-          <button type="button" className="invite-friends__cancel" onClick={onClose}>
+          <button type="button" className="invite-friends__cancel" onClick={onClose} disabled={submitting}>
             Batal
           </button>
           <button
             type="submit"
             className="invite-friends__submit"
-            disabled={
-              !draft.nama.trim()
-              || !draft.nomorId.trim()
-              || lookupState === 'loading'
-              || lookupState === 'not_found'
-            }
+            disabled={!canSubmit}
           >
-            Tambah kontak
+            {submitting ? 'Membuka chat...' : 'Mulai percakapan'}
           </button>
         </div>
       </form>
@@ -213,6 +219,7 @@ export function contactToRoom(contact) {
     id: `contact-${contact.id}`,
     nama_room: contact.nama,
     tipe: 'contact',
+    nomorId: contact.nomorId,
     avatar: avatarMap[contact.status] ?? '#86868b',
     initials,
     lastMessage: `${contact.nomorId} · ${getContactStatusLabel(contact.status)}`,

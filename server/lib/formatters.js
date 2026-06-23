@@ -84,6 +84,7 @@ export function roomToSidebarItem(room, lastMessage, userRole) {
     return {
       ...base,
       isContact: true,
+      nomorId: config.nomor_id ?? null,
       contactStatus: config.contact_status ?? 'user',
       lastMessage: lastMessage?.teks_pesan?.slice(0, 80)
         ?? `${config.nomor_id ?? ''} · ${mapContactStatusLabel(config.contact_status)}`,

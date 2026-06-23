@@ -673,28 +673,49 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     handleCloseGroupBuilder();
   }
 
-  function handleAddContact(contact) {
+  function findRoomByNomorId(nomorId) {
+    const normalized = nomorId.trim().toUpperCase();
+    const rooms = backend.useApi ? backend.rooms : contactRooms;
+    return rooms.find(
+      (room) => room.isContact && room.nomorId?.toUpperCase() === normalized,
+    );
+  }
+
+  function openChatRoom(roomId) {
+    setShowInviteForm(false);
+    setActiveRoomId(roomId);
+    if (backend.useApi && roomId) {
+      backend.loadMessages(roomId);
+    }
+  }
+
+  async function handleAddContact(contact) {
+    const existingRoom = findRoomByNomorId(contact.nomorId);
+    if (existingRoom) {
+      openChatRoom(existingRoom.id);
+      return;
+    }
+
     if (backend.useApi) {
-      chatApi.createContact(mapContactPayloadFromForm({
-        nama: contact.nama,
-        nomorId: contact.nomorId,
-        status: contact.status,
-      }))
-        .then(async ({ contact: saved }) => {
-          await Promise.all([backend.refreshRooms(), backend.refreshContacts()]);
-          setShowInviteForm(false);
-          setActiveRoomId(saved.roomId ?? saved.room_id);
-        })
-        .catch((err) => {
-          setBotNotice(err.message);
-          window.setTimeout(() => setBotNotice(''), 3000);
-        });
+      try {
+        const { contact: saved } = await chatApi.createContact(mapContactPayloadFromForm({
+          nama: contact.nama,
+          nomorId: contact.nomorId,
+          status: contact.status,
+        }));
+        await Promise.all([backend.refreshRooms(), backend.refreshContacts()]);
+        const roomId = saved.roomId ?? saved.room_id;
+        openChatRoom(roomId);
+      } catch (err) {
+        setBotNotice(err.message);
+        window.setTimeout(() => setBotNotice(''), 3000);
+        throw err;
+      }
       return;
     }
 
     setContacts((prev) => [contact, ...prev]);
-    setShowInviteForm(false);
-    setActiveRoomId(`contact-${contact.id}`);
+    openChatRoom(`contact-${contact.id}`);
   }
 
   function handleOpenFaqBuilder() {

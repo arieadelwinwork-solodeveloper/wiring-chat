@@ -158,6 +158,7 @@ export function memoryListSidebar(userId, userRole) {
       };
     }
     if (room.subtype === 'contact') {
+      item.nomorId = room.config?.nomor_id ?? null;
       item.contactStatus = room.config?.contact_status;
     }
     if (room.subtype === 'bot_faq' || room.subtype === 'bot_ai') {
