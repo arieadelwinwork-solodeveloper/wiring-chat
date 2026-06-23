@@ -43,9 +43,9 @@ import {
 const CURRENT_USER_ID = 'user-me';
 
 const DEFAULT_USER = {
-  name: 'Arie',
+  name: 'Pengguna',
   avatarColor: '#0a2540',
-  initials: 'AR',
+  initials: 'PG',
 };
 
 const DEFAULT_BOTS = {
@@ -58,143 +58,6 @@ const DEFAULT_BOTS = {
     knowledgeFiles: [],
     online: true,
   },
-};
-
-const DEFAULT_CONTACTS = [
-  {
-    id: 'contact-1',
-    nama: 'Sarah Wijaya',
-    nomorId: 'USR-002',
-    status: 'user',
-  },
-];
-
-const EXTRA_INVITABLE_MEMBERS = [
-  { id: 'invitee-budi', nama: 'Budi Santoso', subtitle: 'USR-004 · Staff' },
-  { id: 'invitee-dewi', nama: 'Dewi Lestari', subtitle: 'USR-005 · Staff' },
-  { id: 'invitee-rina', nama: 'Rina Kusuma', subtitle: 'USR-006 · Staff' },
-];
-
-const DUMMY_ROOMS = [
-  {
-    id: 'room-1',
-    nama_room: 'Tim Engineering',
-    tipe: 'internal',
-    avatar: '#5856d6',
-    initials: 'TE',
-    lastMessage: 'Deploy v2.4 sudah selesai.',
-    lastTime: '10:32',
-  },
-  {
-    id: 'room-2',
-    nama_room: 'Sarah Wijaya',
-    tipe: 'internal',
-    avatar: '#ff9500',
-    initials: 'SW',
-    lastMessage: 'Bisa review PR saya?',
-    lastTime: '09:15',
-  },
-  {
-    id: 'room-4',
-    nama_room: 'General',
-    tipe: 'internal',
-    avatar: '#34c759',
-    initials: 'GN',
-    lastMessage: 'Meeting besok pukul 09:00.',
-    lastTime: 'Kemarin',
-  },
-  {
-    id: 'room-5',
-    nama_room: 'Budi Santoso',
-    tipe: 'internal',
-    avatar: '#007aff',
-    initials: 'BS',
-    lastMessage: 'Noted, terima kasih!',
-    lastTime: 'Sen',
-  },
-];
-
-const DUMMY_MESSAGES = {
-  'room-1': [
-    {
-      id: 'm1',
-      sender_id: 'user-2',
-      sender_role: 'staff',
-      sender_name: 'Andi Pratama',
-      teks_pesan: 'Halo tim, deploy v2.4 sudah dijadwalkan malam ini.',
-      created_at: '2026-06-18T08:00:00',
-    },
-    {
-      id: 'm2',
-      sender_id: CURRENT_USER_ID,
-      sender_role: 'staff',
-      sender_name: 'Saya',
-      teks_pesan: 'Siap, saya standby untuk monitoring.',
-      created_at: '2026-06-18T08:05:00',
-    },
-    {
-      id: 'm3',
-      sender_id: null,
-      sender_role: 'ai',
-      sender_name: 'AI Assistant',
-      teks_pesan: 'Berdasarkan log terakhir, tidak ada error kritis. Semua service dalam status healthy.',
-      created_at: '2026-06-18T08:10:00',
-    },
-    {
-      id: 'm4',
-      sender_id: 'user-3',
-      sender_role: 'staff',
-      sender_name: 'Rina Kusuma',
-      teks_pesan: 'Deploy v2.4 sudah selesai. Semua test passed ✅',
-      created_at: '2026-06-18T10:32:00',
-    },
-  ],
-  'room-2': [
-    {
-      id: 'm5',
-      sender_id: 'user-4',
-      sender_role: 'staff',
-      sender_name: 'Sarah Wijaya',
-      teks_pesan: 'Hai! Bisa review PR #142? Perubahan di modul auth.',
-      created_at: '2026-06-18T09:10:00',
-    },
-    {
-      id: 'm6',
-      sender_id: CURRENT_USER_ID,
-      sender_role: 'staff',
-      sender_name: 'Saya',
-      teks_pesan: 'Oke, saya cek sekarang.',
-      created_at: '2026-06-18T09:12:00',
-    },
-  ],
-  'room-4': [
-    {
-      id: 'm9',
-      sender_id: 'user-5',
-      sender_role: 'staff',
-      sender_name: 'Dewi Lestari',
-      teks_pesan: 'Reminder: meeting all-hands besok pukul 09:00 WIB.',
-      created_at: '2026-06-17T16:00:00',
-    },
-  ],
-  'room-5': [
-    {
-      id: 'm10',
-      sender_id: CURRENT_USER_ID,
-      sender_role: 'staff',
-      sender_name: 'Saya',
-      teks_pesan: 'Dokumentasi API sudah diupdate ya.',
-      created_at: '2026-06-16T11:00:00',
-    },
-    {
-      id: 'm11',
-      sender_id: 'user-6',
-      sender_role: 'staff',
-      sender_name: 'Budi Santoso',
-      teks_pesan: 'Noted, terima kasih!',
-      created_at: '2026-06-16T11:30:00',
-    },
-  ],
 };
 
 function buildBotRooms(bots) {
@@ -235,14 +98,11 @@ function buildBotRooms(bots) {
 }
 
 function buildInvitableMembers(contacts) {
-  return [
-    ...contacts.map((contact) => ({
-      id: contact.id,
-      nama: contact.nama,
-      subtitle: `${contact.nomorId} · ${getContactStatusLabel(contact.status)}`,
-    })),
-    ...EXTRA_INVITABLE_MEMBERS,
-  ];
+  return contacts.map((contact) => ({
+    id: contact.id,
+    nama: contact.nama,
+    subtitle: `${contact.nomorId} · ${getContactStatusLabel(contact.status)}`,
+  }));
 }
 
 function groupToRoom(group) {
@@ -431,7 +291,7 @@ const AVATAR_COLORS = ['#0a2540', '#5856d6', '#007aff', '#34c759', '#ff9500', '#
 export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   const backend = useChatBackend(defaultRole);
   const role = backend.profile?.role ?? defaultRole;
-  const [activeRoomId, setActiveRoomId] = useState(DUMMY_ROOMS[0].id);
+  const [activeRoomId, setActiveRoomId] = useState(null);
   const [draft, setDraft] = useState('');
   const [currentUser, setCurrentUser] = useState(DEFAULT_USER);
   const [bots, setBots] = useState(DEFAULT_BOTS);
@@ -446,7 +306,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   const [groupDraft, setGroupDraft] = useState(null);
   const [groups, setGroups] = useState([]);
   const [botMessages, setBotMessages] = useState({});
-  const [contacts, setContacts] = useState(DEFAULT_CONTACTS);
+  const [contacts, setContacts] = useState([]);
   const [hiddenRoomIds, setHiddenRoomIds] = useState(() => new Set());
   const [messageActionMode, setMessageActionMode] = useState(null);
   const [selectedMessageIds, setSelectedMessageIds] = useState(() => new Set());
@@ -463,12 +323,6 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   }, [backend.useApi, backend.profile]);
 
   useEffect(() => {
-    if (backend.useApi && backend.rooms.length && !backend.rooms.find((r) => r.id === activeRoomId)) {
-      setActiveRoomId(backend.rooms[0].id);
-    }
-  }, [backend.useApi, backend.rooms, activeRoomId]);
-
-  useEffect(() => {
     if (backend.useApi && activeRoomId) {
       backend.loadMessages(activeRoomId);
     }
@@ -476,7 +330,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
 
   useEffect(() => {
     if (backend.useApi) {
-      setContacts(backend.contacts.length ? backend.contacts : DEFAULT_CONTACTS);
+      setContacts(backend.contacts);
     }
   }, [backend.useApi, backend.contacts]);
 
@@ -507,9 +361,9 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     if (backend.useApi) {
       rooms = backend.rooms;
     } else if (role === 'owner') {
-      rooms = [...groupRooms, ...contactRooms, ...DUMMY_ROOMS];
+      rooms = [...groupRooms, ...contactRooms];
     } else {
-      rooms = [...groupRooms, ...contactRooms, ...botRooms, ...DUMMY_ROOMS];
+      rooms = [...groupRooms, ...contactRooms, ...botRooms];
     }
     return rooms.filter((room) => !hiddenRoomIds.has(room.id));
   }, [backend.useApi, backend.rooms, role, groupRooms, contactRooms, botRooms, hiddenRoomIds]);
@@ -520,13 +374,23 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         ? [...backend.rooms, ...backend.ownerBots]
         : backend.rooms;
     }
-    return [...groupRooms, ...contactRooms, ...botRooms, ...DUMMY_ROOMS];
+    return [...groupRooms, ...contactRooms, ...botRooms];
   }, [backend.useApi, backend.rooms, backend.ownerBots, role, groupRooms, contactRooms, botRooms]);
+
+  useEffect(() => {
+    if (!chatRooms.length) {
+      if (activeRoomId) setActiveRoomId(null);
+      return;
+    }
+    if (!activeRoomId || !chatRooms.find((room) => room.id === activeRoomId)) {
+      setActiveRoomId(chatRooms[0].id);
+    }
+  }, [chatRooms, activeRoomId]);
 
   const activeRoom = chatRooms.find((room) => room.id === activeRoomId);
   const messages = backend.useApi
     ? (backend.messagesByRoom[activeRoomId] ?? [])
-    : (botMessages[activeRoomId] ?? DUMMY_MESSAGES[activeRoomId] ?? []);
+    : (botMessages[activeRoomId] ?? []);
 
   useEffect(() => {
     cancelMessageAction();
@@ -1028,8 +892,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
 
     setBotMessages((prev) => ({
       ...prev,
-      [activeRoomId]: (prev[activeRoomId] ?? DUMMY_MESSAGES[activeRoomId] ?? [])
-        .filter((msg) => msg.id !== messageId),
+      [activeRoomId]: (prev[activeRoomId] ?? []).filter((msg) => msg.id !== messageId),
     }));
   }
 
@@ -1055,7 +918,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     setBotMessages((prev) => ({
       ...prev,
       [activeRoomId]: [
-        ...(prev[activeRoomId] ?? DUMMY_MESSAGES[activeRoomId] ?? []),
+        ...(prev[activeRoomId] ?? []),
         {
           id: `local-${Date.now()}`,
           sender_id: CURRENT_USER_ID,

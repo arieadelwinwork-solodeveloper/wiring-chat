@@ -11,67 +11,16 @@ const store = {
 
 export const DEV_USER = '00000000-0000-0000-0000-000000000001';
 
-function seedDevData() {
-  if (store.rooms.size > 0) return;
-
-  store.profiles.set(DEV_USER, {
-    id: DEV_USER,
-    display_name: 'Arie',
-    avatar_color: '#0a2540',
-    role: 'owner',
-    nomor_id: 'USR-001',
-  });
-
-  const defaults = [
-    { id: 'room-1', nama_room: 'Tim Engineering', avatar: '#5856d6', preview: 'Deploy v2.4 sudah selesai.' },
-    { id: 'room-2', nama_room: 'Sarah Wijaya', avatar: '#ff9500', preview: 'Bisa review PR saya?' },
-    { id: 'room-4', nama_room: 'General', avatar: '#34c759', preview: 'Meeting besok pukul 09:00.' },
-    { id: 'room-5', nama_room: 'Budi Santoso', avatar: '#007aff', preview: 'Noted, terima kasih!' },
-  ];
-
-  for (const r of defaults) {
-    store.rooms.set(r.id, {
-      id: r.id,
-      nama_room: r.nama_room,
-      tipe: 'internal',
-      subtype: 'standard',
-      owner_id: DEV_USER,
-      avatar_color: r.avatar,
-      config: {},
-      updated_at: new Date().toISOString(),
+function ensureDevProfile() {
+  if (!store.profiles.has(DEV_USER)) {
+    store.profiles.set(DEV_USER, {
+      id: DEV_USER,
+      display_name: 'Dev User',
+      avatar_color: '#0a2540',
+      role: 'owner',
+      nomor_id: null,
     });
-    store.messages.set(r.id, [{
-      id: randomUUID(),
-      room_id: r.id,
-      sender_id: null,
-      sender_role: 'staff',
-      sender_name: 'Sistem',
-      teks_pesan: r.preview,
-      created_at: new Date().toISOString(),
-    }]);
   }
-
-  const contactId = 'contact-1';
-  const contactRoomId = `contact-room-${contactId}`;
-  store.contacts.set(contactId, {
-    id: contactId,
-    owner_id: DEV_USER,
-    nama: 'Sarah Wijaya',
-    nomor_id: 'USR-002',
-    status: 'user',
-    room_id: contactRoomId,
-  });
-  store.rooms.set(contactRoomId, {
-    id: contactRoomId,
-    nama_room: 'Sarah Wijaya',
-    tipe: 'internal',
-    subtype: 'contact',
-    owner_id: DEV_USER,
-    avatar_color: '#007aff',
-    config: { nomor_id: 'USR-002', contact_status: 'user' },
-    updated_at: new Date().toISOString(),
-  });
-  store.messages.set(contactRoomId, []);
 }
 
 export function isMemoryMode() {
@@ -79,12 +28,12 @@ export function isMemoryMode() {
 }
 
 export function memoryGetProfile(userId) {
-  seedDevData();
+  ensureDevProfile();
   return store.profiles.get(userId) ?? store.profiles.get(DEV_USER);
 }
 
 export function memoryUpdateProfile(userId, updates) {
-  seedDevData();
+  ensureDevProfile();
   const current = memoryGetProfile(userId);
   const next = { ...current, ...updates, id: userId };
   store.profiles.set(userId, next);
@@ -92,7 +41,7 @@ export function memoryUpdateProfile(userId, updates) {
 }
 
 export function memoryListContacts(ownerId) {
-  seedDevData();
+  ensureDevProfile();
   return [...store.contacts.values()]
     .filter((c) => c.owner_id === ownerId)
     .map((c) => ({
@@ -105,7 +54,7 @@ export function memoryListContacts(ownerId) {
 }
 
 export function memoryCreateContact(ownerId, payload) {
-  seedDevData();
+  ensureDevProfile();
   const id = randomUUID();
   const roomId = randomUUID();
 
@@ -143,7 +92,7 @@ export function memoryCreateContact(ownerId, payload) {
 }
 
 export function memoryListSidebar(userId, userRole) {
-  seedDevData();
+  ensureDevProfile();
   const rooms = [...store.rooms.values()].map((room) => {
     const msgs = store.messages.get(room.id) ?? [];
     const last = msgs[msgs.length - 1];
@@ -210,12 +159,12 @@ export function memoryListSidebar(userId, userRole) {
 }
 
 export function memoryGetMessages(roomId, userId) {
-  seedDevData();
+  ensureDevProfile();
   return (store.messages.get(roomId) ?? []).map((m) => messageToClient(m, userId));
 }
 
 export function memorySendMessage(roomId, userId, displayName, text) {
-  seedDevData();
+  ensureDevProfile();
   const msg = {
     id: randomUUID(),
     room_id: roomId,
@@ -232,7 +181,7 @@ export function memorySendMessage(roomId, userId, displayName, text) {
 }
 
 export function memoryInsertSystemMessage(roomId, text, senderName = 'Sistem') {
-  seedDevData();
+  ensureDevProfile();
   const msg = {
     id: randomUUID(),
     room_id: roomId,
@@ -249,7 +198,7 @@ export function memoryInsertSystemMessage(roomId, text, senderName = 'Sistem') {
 }
 
 export function memoryDeleteMessage(roomId, messageId) {
-  seedDevData();
+  ensureDevProfile();
   const list = store.messages.get(roomId) ?? [];
   const next = list.filter((msg) => msg.id !== messageId);
   store.messages.set(roomId, next);
@@ -257,7 +206,7 @@ export function memoryDeleteMessage(roomId, messageId) {
 }
 
 export function memoryCreateGroup(ownerId, payload, memberNameMap) {
-  seedDevData();
+  ensureDevProfile();
   const roomId = randomUUID();
   const config = {
     member_ids: payload.member_ids,
@@ -293,7 +242,7 @@ export function memoryCreateGroup(ownerId, payload, memberNameMap) {
 }
 
 export function memoryCreateFaqBot(ownerId, payload) {
-  seedDevData();
+  ensureDevProfile();
   const roomId = randomUUID();
   const botId = randomUUID();
 
@@ -327,7 +276,7 @@ export function memoryCreateFaqBot(ownerId, payload) {
 }
 
 export function memoryCreateAiAssistant(ownerId, payload) {
-  seedDevData();
+  ensureDevProfile();
   const roomId = randomUUID();
   const botId = randomUUID();
 
@@ -362,11 +311,11 @@ export function memoryCreateAiAssistant(ownerId, payload) {
 }
 
 export function memoryGetRoom(roomId) {
-  seedDevData();
+  ensureDevProfile();
   return store.rooms.get(roomId);
 }
 
 export function memoryGetBotByRoom(roomId) {
-  seedDevData();
+  ensureDevProfile();
   return [...store.bots.values()].find((b) => b.room_id === roomId);
 }

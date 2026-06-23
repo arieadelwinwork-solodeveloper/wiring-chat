@@ -4,16 +4,7 @@ Modular app shell dengan modul **Internal Chat** (React + Vite). Backend direnca
 
 ## Menjalankan
 
-### Frontend saja (data dummy lokal)
-
-```bash
-npm install
-npm run dev
-```
-
-Set `VITE_USE_API=false` jika backend tidak jalan.
-
-### Frontend + Backend API
+### Frontend + Backend API (lokal)
 
 ```bash
 npm install
@@ -22,7 +13,7 @@ npm run dev:server   # terminal 1 — API http://localhost:3001
 npm run dev          # terminal 2 — UI http://localhost:5173
 ```
 
-Mode dev tanpa Supabase: `DEV_BYPASS_AUTH=true` (default di `.env.example`). Data disimpan in-memory di server.
+Data chat berasal dari API/Supabase — tidak ada data dummy bawaan.
 
 ### Production Supabase
 
