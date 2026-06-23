@@ -5,7 +5,33 @@ import {
   isMemoryMode,
   memoryListContacts,
   memoryCreateContact,
+  memoryLookupUserByNomorId,
 } from '../lib/memoryStore.js';
+
+export async function lookupUserByNomorId(nomorId, requesterId) {
+  const normalized = nomorId.trim().toUpperCase();
+
+  if (isMemoryMode()) {
+    return memoryLookupUserByNomorId(normalized, requesterId);
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('id, display_name, nomor_id, role')
+    .eq('nomor_id', normalized)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data || data.id === requesterId) return null;
+
+  return {
+    userId: data.id,
+    nama: data.display_name,
+    nomorId: data.nomor_id,
+    role: data.role,
+  };
+}
 
 export async function listContacts(ownerId) {
   if (isMemoryMode()) return memoryListContacts(ownerId);
@@ -40,18 +66,21 @@ export async function createContact(ownerId, payload) {
   if (isMemoryMode()) return memoryCreateContact(ownerId, payload);
 
   const supabase = getSupabaseAdmin();
+  const linked = await lookupUserByNomorId(payload.nomor_id, ownerId);
+  const nama = linked?.nama ?? payload.nama;
+  const linkedUserId = linked?.userId ?? null;
 
   const { data: room, error: roomError } = await supabase
     .from('chat_rooms')
     .insert({
-      nama_room: payload.nama,
+      nama_room: nama,
       tipe: 'internal',
       subtype: 'contact',
       owner_id: ownerId,
-      avatar_color: pickAvatarColor(payload.nama),
+      avatar_color: pickAvatarColor(nama),
       config: {
         nomor_id: payload.nomor_id,
-        contact_status: payload.status,
+        contact_status: linked?.role ?? payload.status,
       },
     })
     .select()
@@ -63,9 +92,10 @@ export async function createContact(ownerId, payload) {
     .from('contacts')
     .insert({
       owner_id: ownerId,
-      nama: payload.nama,
+      nama,
       nomor_id: payload.nomor_id,
-      status: payload.status,
+      status: linked?.role ?? payload.status,
+      linked_user_id: linkedUserId,
       room_id: room.id,
     })
     .select()
@@ -75,7 +105,7 @@ export async function createContact(ownerId, payload) {
 
   await insertSystemMessage(
     room.id,
-    `Kontak ${payload.nama} (${payload.nomor_id}) ditambahkan.`,
+    `Kontak ${nama} (${payload.nomor_id}) ditambahkan.`,
   );
 
   return {
@@ -84,5 +114,6 @@ export async function createContact(ownerId, payload) {
     nomorId: contact.nomor_id,
     status: contact.status,
     roomId: room.id,
+    linkedUserId,
   };
 }

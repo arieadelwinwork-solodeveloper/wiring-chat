@@ -49,6 +49,24 @@ export function memoryUpdateProfile(userId, updates) {
   return next;
 }
 
+export function memoryLookupUserByNomorId(nomorId, requesterId) {
+  ensureDevProfile();
+  const normalized = nomorId.trim().toUpperCase();
+
+  for (const profile of store.profiles.values()) {
+    if (profile.nomor_id?.toUpperCase() === normalized) {
+      if (profile.id === requesterId) return null;
+      return {
+        userId: profile.id,
+        nama: profile.display_name,
+        nomorId: profile.nomor_id,
+        role: profile.role ?? 'user',
+      };
+    }
+  }
+  return null;
+}
+
 export function memoryListContacts(ownerId) {
   ensureDevProfile();
   return [...store.contacts.values()]
@@ -64,26 +82,30 @@ export function memoryListContacts(ownerId) {
 
 export function memoryCreateContact(ownerId, payload) {
   ensureDevProfile();
+  const linked = memoryLookupUserByNomorId(payload.nomor_id, ownerId);
+  const nama = linked?.nama ?? payload.nama;
+  const linkedUserId = linked?.userId ?? null;
   const id = randomUUID();
   const roomId = randomUUID();
 
   store.rooms.set(roomId, {
     id: roomId,
-    nama_room: payload.nama,
+    nama_room: nama,
     tipe: 'internal',
     subtype: 'contact',
     owner_id: ownerId,
-    avatar_color: pickAvatarColor(payload.nama),
-    config: { nomor_id: payload.nomor_id, contact_status: payload.status },
+    avatar_color: pickAvatarColor(nama),
+    config: { nomor_id: payload.nomor_id, contact_status: linked?.role ?? payload.status },
     updated_at: new Date().toISOString(),
   });
 
   store.contacts.set(id, {
     id,
     owner_id: ownerId,
-    nama: payload.nama,
+    nama,
     nomor_id: payload.nomor_id,
-    status: payload.status,
+    status: linked?.role ?? payload.status,
+    linked_user_id: linkedUserId,
     room_id: roomId,
   });
 
@@ -93,11 +115,18 @@ export function memoryCreateContact(ownerId, payload) {
     sender_id: null,
     sender_role: 'ai',
     sender_name: 'Sistem',
-    teks_pesan: `Kontak ${payload.nama} (${payload.nomor_id}) ditambahkan.`,
+    teks_pesan: `Kontak ${nama} (${payload.nomor_id}) ditambahkan.`,
     created_at: new Date().toISOString(),
   }]);
 
-  return { id, nama: payload.nama, nomorId: payload.nomor_id, status: payload.status, roomId };
+  return {
+    id,
+    nama,
+    nomorId: payload.nomor_id,
+    status: linked?.role ?? payload.status,
+    roomId,
+    linkedUserId,
+  };
 }
 
 export function memoryListSidebar(userId, userRole) {

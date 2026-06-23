@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   id            UUID PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
   display_name  TEXT NOT NULL,
   avatar_color  TEXT NOT NULL DEFAULT '#0a2540',
+  avatar_url    TEXT,
   role          user_role NOT NULL DEFAULT 'user',
   nomor_id      TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),

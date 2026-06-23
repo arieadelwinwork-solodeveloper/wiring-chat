@@ -9,6 +9,17 @@ const availableLlmSchema = z.string().refine(
 export const updateProfileSchema = z.object({
   display_name: z.string().min(1).max(100).optional(),
   avatar_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  avatar_url: z.union([z.string().url(), z.literal('')]).nullable().optional(),
+});
+
+export const uploadAvatarSchema = z.object({
+  image_data: z
+    .string()
+    .regex(/^data:image\/(jpeg|png|webp|gif);base64,/, 'Format gambar tidak valid'),
+});
+
+export const nomorIdLookupParamSchema = z.object({
+  nomorId: z.string().min(1).max(50).regex(/^USR-[0-9A-Z]+$/i),
 });
 
 export const createContactSchema = z.object({

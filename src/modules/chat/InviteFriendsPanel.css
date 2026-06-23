@@ -102,6 +102,16 @@
   border-color: #0a2540;
 }
 
+.invite-friends__hint {
+  font-size: 12px;
+  color: #34c759;
+  margin-top: 2px;
+}
+
+.invite-friends__hint--error {
+  color: #ff3b30;
+}
+
 .invite-friends__select {
   cursor: pointer;
   background: #ffffff;

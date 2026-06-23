@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { chatApi } from '../../services/chatApi.js';
 
 export const CONTACT_STATUS_OPTIONS = [
   { value: 'owner', label: 'Owner' },
@@ -10,6 +11,8 @@ export const CONTACT_STATUS_OPTIONS = [
 export function getContactStatusLabel(status) {
   return CONTACT_STATUS_OPTIONS.find((item) => item.value === status)?.label ?? status;
 }
+
+const NOMOR_ID_PATTERN = /^USR-[0-9A-Z]+$/i;
 
 function createContactDraft() {
   return {
@@ -30,10 +33,55 @@ export function InviteFriendsTrigger({ onClick }) {
 
 export default function InviteFriendsForm({ onAddContact, onClose }) {
   const [draft, setDraft] = useState(createContactDraft);
+  const [lookupState, setLookupState] = useState('idle');
+  const [lookupError, setLookupError] = useState('');
 
   function updateDraft(field, value) {
     setDraft((prev) => ({ ...prev, [field]: value }));
+    if (field === 'nomorId') {
+      setLookupState('idle');
+      setLookupError('');
+    }
   }
+
+  useEffect(() => {
+    const nomorId = draft.nomorId.trim().toUpperCase();
+    if (!NOMOR_ID_PATTERN.test(nomorId)) {
+      setLookupState('idle');
+      setLookupError('');
+      return undefined;
+    }
+
+    if (!chatApi.isEnabled()) return undefined;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setLookupState('loading');
+      setLookupError('');
+
+      chatApi.lookupUserByNomorId(nomorId)
+        .then(({ user }) => {
+          if (cancelled) return;
+          setDraft((prev) => ({
+            ...prev,
+            nomorId: user.nomorId ?? nomorId,
+            nama: user.nama,
+            status: user.role ?? prev.status,
+          }));
+          setLookupState('found');
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setLookupState('not_found');
+          setLookupError(err.message);
+        });
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [draft.nomorId]);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -42,12 +90,20 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
     onAddContact({
       id: `contact-${Date.now()}`,
       nama: draft.nama.trim(),
-      nomorId: draft.nomorId.trim(),
+      nomorId: draft.nomorId.trim().toUpperCase(),
       status: draft.status,
     });
 
     onClose();
   }
+
+  const nomorIdHint = lookupState === 'loading'
+    ? 'Mencari pengguna...'
+    : lookupState === 'found'
+      ? `Ditemukan: ${draft.nama}`
+      : lookupState === 'not_found'
+        ? lookupError
+        : '';
 
   return (
     <div className="invite-friends-form">
@@ -65,28 +121,39 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
 
       <form className="invite-friends-form__body" onSubmit={handleSubmit}>
         <p className="faq-bot-flow-hint">
-          Minta ID teman (contoh USR-A1B2C3) dari profil mereka di sidebar, lalu isi di bawah.
+          Minta ID teman (contoh USR-A1B2C3) dari profil mereka di sidebar. Nama akan terisi otomatis.
         </p>
-
-        <label className="invite-friends__field">
-          <span className="invite-friends__label">Nama kontak</span>
-          <input
-            type="text"
-            className="invite-friends__input"
-            placeholder="Nama lengkap"
-            value={draft.nama}
-            onChange={(e) => updateDraft('nama', e.target.value)}
-          />
-        </label>
 
         <label className="invite-friends__field">
           <span className="invite-friends__label">Nomor ID</span>
           <input
             type="text"
             className="invite-friends__input"
-            placeholder="Contoh: USR-003"
+            placeholder="Contoh: USR-A1B2C3"
             value={draft.nomorId}
             onChange={(e) => updateDraft('nomorId', e.target.value)}
+            autoComplete="off"
+          />
+          {nomorIdHint && (
+            <span
+              className={`invite-friends__hint${
+                lookupState === 'not_found' ? ' invite-friends__hint--error' : ''
+              }`}
+            >
+              {nomorIdHint}
+            </span>
+          )}
+        </label>
+
+        <label className="invite-friends__field">
+          <span className="invite-friends__label">Nama kontak</span>
+          <input
+            type="text"
+            className="invite-friends__input"
+            placeholder="Terisi otomatis dari ID"
+            value={draft.nama}
+            onChange={(e) => updateDraft('nama', e.target.value)}
+            readOnly={lookupState === 'found'}
           />
         </label>
 
@@ -112,7 +179,12 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
           <button
             type="submit"
             className="invite-friends__submit"
-            disabled={!draft.nama.trim() || !draft.nomorId.trim()}
+            disabled={
+              !draft.nama.trim()
+              || !draft.nomorId.trim()
+              || lookupState === 'loading'
+              || lookupState === 'not_found'
+            }
           >
             Tambah kontak
           </button>

@@ -20,6 +20,9 @@ import InviteFriendsForm, {
   getContactStatusLabel,
 } from './InviteFriendsPanel';
 import './InviteFriendsPanel.css';
+import ProfileSettingsPanel from './ProfileSettingsPanel';
+import './ProfileSettingsPanel.css';
+import UserAvatar from './UserAvatar';
 import OwnerSidebarTools from './OwnerSidebarTools';
 import './OwnerSidebarTools.css';
 import SwipeableRoomItem from './SwipeableRoomItem';
@@ -46,9 +49,25 @@ const CURRENT_USER_ID = 'user-me';
 const DEFAULT_USER = {
   name: 'Pengguna',
   avatarColor: '#0a2540',
+  avatarUrl: null,
   initials: 'PG',
   nomorId: null,
 };
+
+const LOCAL_PROFILE_KEY = 'wiring_local_profile';
+
+function loadLocalProfile() {
+  try {
+    const raw = localStorage.getItem(LOCAL_PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLocalProfile(profile) {
+  localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(profile));
+}
 
 const DEFAULT_BOTS = {
   faq: { generated: false, label: 'Bot FAQ', nama: '', kodeId: '', online: true },
@@ -174,8 +193,7 @@ function UserProfileMenu({
   onSelectRoom,
   onOpenInviteForm,
   onOpenGroupBuilder,
-  onChangeName,
-  onChangeAvatar,
+  onOpenProfileSettings,
   onOpenFaqBuilder,
   onOpenAiAssistant,
   onToggleAgentOnline,
@@ -200,15 +218,9 @@ function UserProfileMenu({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  function handleChangeName() {
+  function handleOpenProfile() {
     setOpen(false);
-    const nextName = window.prompt('Ganti nama', user.name);
-    if (nextName?.trim()) onChangeName(nextName.trim());
-  }
-
-  function handleChangeAvatar() {
-    setOpen(false);
-    onChangeAvatar();
+    onOpenProfileSettings();
   }
 
   return (
@@ -220,12 +232,7 @@ function UserProfileMenu({
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <div
-          className="chat-user-profile__avatar"
-          style={{ background: user.avatarColor }}
-        >
-          {user.initials}
-        </div>
+        <UserAvatar user={user} className="chat-user-profile__avatar" />
         <div className="chat-user-profile__meta">
           <span className="chat-user-profile__name">{user.name}</span>
           {user.nomorId && (
@@ -272,11 +279,8 @@ function UserProfileMenu({
 
       {open && (
         <div className="chat-user-menu" role="menu">
-          <button type="button" className="chat-user-menu__item" role="menuitem" onClick={handleChangeAvatar}>
-            Ganti profil
-          </button>
-          <button type="button" className="chat-user-menu__item" role="menuitem" onClick={handleChangeName}>
-            Ganti nama
+          <button type="button" className="chat-user-menu__item" role="menuitem" onClick={handleOpenProfile}>
+            Ubah profil
           </button>
         </div>
       )}
@@ -293,8 +297,6 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-const AVATAR_COLORS = ['#0a2540', '#5856d6', '#007aff', '#34c759', '#ff9500', '#ff2d55'];
-
 export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   const backend = useChatBackend(defaultRole);
   const role = backend.profile?.role ?? defaultRole;
@@ -309,6 +311,8 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   const [aiAssistantDraft, setAiAssistantDraft] = useState(null);
   const [showAiBuilder, setShowAiBuilder] = useState(false);
   const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [showGroupBuilder, setShowGroupBuilder] = useState(false);
   const [groupDraft, setGroupDraft] = useState(null);
   const [groups, setGroups] = useState([]);
@@ -324,6 +328,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       setCurrentUser({
         name: backend.profile.name,
         avatarColor: backend.profile.avatarColor,
+        avatarUrl: backend.profile.avatarUrl ?? null,
         initials: backend.profile.initials ?? getInitials(backend.profile.name),
         nomorId: backend.profile.nomorId ?? null,
       });
@@ -331,9 +336,12 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     }
 
     if (!backend.useApi) {
+      const local = loadLocalProfile();
       setCurrentUser((prev) => ({
         ...prev,
+        ...(local ?? {}),
         nomorId: getOrCreateLocalNomorId(),
+        initials: getInitials(local?.name ?? prev.name),
       }));
     }
   }, [backend.useApi, backend.profile]);
@@ -483,6 +491,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     setShowFaqBuilder(false);
     setShowAiBuilder(false);
     setShowInviteForm(false);
+    setShowProfileSettings(false);
     setShowGroupBuilder(false);
     setFaqBotDraft(null);
     setAiAssistantDraft(null);
@@ -521,6 +530,65 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
 
   function handleCloseInviteForm() {
     setShowInviteForm(false);
+  }
+
+  function handleOpenProfileSettings() {
+    closePanels();
+    setShowProfileSettings(true);
+  }
+
+  function handleCloseProfileSettings() {
+    setShowProfileSettings(false);
+  }
+
+  async function handleSaveProfile({ name, avatarColor, imageData, removePhoto }) {
+    setProfileSaving(true);
+
+    const nextUser = {
+      ...currentUser,
+      name,
+      avatarColor,
+      initials: getInitials(name),
+      avatarUrl: removePhoto ? null : (imageData ?? currentUser.avatarUrl),
+    };
+
+    try {
+      if (backend.useApi) {
+        if (imageData) {
+          await chatApi.uploadAvatar(imageData);
+        }
+
+        const patch = {
+          display_name: name,
+          avatar_color: avatarColor,
+        };
+        if (removePhoto && !imageData) {
+          patch.avatar_url = '';
+        }
+
+        const updated = await backend.updateProfile(patch);
+        nextUser.avatarUrl = updated.avatarUrl ?? null;
+        nextUser.name = updated.name ?? name;
+        nextUser.initials = updated.initials ?? getInitials(name);
+        nextUser.avatarColor = updated.avatarColor ?? avatarColor;
+      } else {
+        saveLocalProfile({
+          name: nextUser.name,
+          avatarColor: nextUser.avatarColor,
+          avatarUrl: nextUser.avatarUrl,
+        });
+      }
+
+      setCurrentUser(nextUser);
+      setShowProfileSettings(false);
+      setBotNotice('Profil berhasil disimpan.');
+      window.setTimeout(() => setBotNotice(''), 3000);
+    } catch (err) {
+      setBotNotice(err.message || 'Gagal menyimpan profil');
+      window.setTimeout(() => setBotNotice(''), 3000);
+    } finally {
+      setProfileSaving(false);
+    }
   }
 
   function handleOpenGroupBuilder() {
@@ -603,22 +671,6 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     setBotNotice(`Grup "${group.nama}" berhasil dibuat.`);
     window.setTimeout(() => setBotNotice(''), 3000);
     handleCloseGroupBuilder();
-  }
-
-  function handleChangeName(name) {
-    setCurrentUser((prev) => ({
-      ...prev,
-      name,
-      initials: getInitials(name),
-    }));
-  }
-
-  function handleChangeAvatar() {
-    setCurrentUser((prev) => {
-      const currentIndex = AVATAR_COLORS.indexOf(prev.avatarColor);
-      const nextColor = AVATAR_COLORS[(currentIndex + 1) % AVATAR_COLORS.length];
-      return { ...prev, avatarColor: nextColor };
-    });
   }
 
   function handleAddContact(contact) {
@@ -960,8 +1012,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
             onSelectRoom={handleSelectRoom}
             onOpenInviteForm={handleOpenInviteForm}
             onOpenGroupBuilder={handleOpenGroupBuilder}
-            onChangeName={handleChangeName}
-            onChangeAvatar={handleChangeAvatar}
+            onOpenProfileSettings={handleOpenProfileSettings}
             onOpenFaqBuilder={handleOpenFaqBuilder}
             onOpenAiAssistant={handleOpenAiAssistant}
             onToggleAgentOnline={handleToggleAgentOnline}
@@ -989,7 +1040,14 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       </aside>
 
       <main className="chat-main">
-        {showInviteForm ? (
+        {showProfileSettings ? (
+          <ProfileSettingsPanel
+            user={currentUser}
+            saving={profileSaving}
+            onSave={handleSaveProfile}
+            onClose={handleCloseProfileSettings}
+          />
+        ) : showInviteForm ? (
           <InviteFriendsForm
             onAddContact={handleAddContact}
             onClose={handleCloseInviteForm}

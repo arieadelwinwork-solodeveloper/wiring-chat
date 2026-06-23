@@ -32,6 +32,12 @@ export function useChatBackend(role) {
     setInvitableMembers(invitableRes.members ?? []);
   }, []);
 
+  const updateProfile = useCallback(async (updates) => {
+    const data = await chatApi.updateProfile(updates);
+    setProfile(data);
+    return data;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -84,6 +90,7 @@ export function useChatBackend(role) {
     messagesByRoom,
     refreshRooms,
     refreshContacts,
+    updateProfile,
     loadMessages,
     setMessagesByRoom,
   };

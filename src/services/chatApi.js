@@ -27,8 +27,12 @@ export const chatApi = {
 
   getProfile: () => request('/profile/me'),
   updateProfile: (body) => request('/profile/me', { method: 'PATCH', body: JSON.stringify(body) }),
+  uploadAvatar: (imageData) =>
+    request('/profile/me/avatar', { method: 'POST', body: JSON.stringify({ image_data: imageData }) }),
 
   getContacts: () => request('/contacts'),
+  lookupUserByNomorId: (nomorId) =>
+    request(`/contacts/lookup/${encodeURIComponent(nomorId.trim().toUpperCase())}`),
   getInvitableMembers: () => request('/contacts/invitable'),
   createContact: (body) => request('/contacts', { method: 'POST', body: JSON.stringify(body) }),
 

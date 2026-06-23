@@ -36,7 +36,7 @@ export async function authMiddleware(req, res, next) {
 
   const { data: profile } = await supabase
     .from('user_profiles')
-    .select('role, display_name, avatar_color, nomor_id')
+    .select('role, display_name, avatar_color, avatar_url, nomor_id')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -45,6 +45,7 @@ export async function authMiddleware(req, res, next) {
     role: profile?.role ?? 'user',
     displayName: profile?.display_name,
     avatarColor: profile?.avatar_color,
+    avatarUrl: profile?.avatar_url,
     nomorId: profile?.nomor_id,
   };
   req.accessToken = token;

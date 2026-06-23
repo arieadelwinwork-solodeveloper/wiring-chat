@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
   id            UUID PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
   display_name  TEXT NOT NULL,
   avatar_color  TEXT NOT NULL DEFAULT '#0a2540',
+  avatar_url    TEXT,
   role          user_role NOT NULL DEFAULT 'user',
   nomor_id      TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -45,6 +46,8 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 
   CONSTRAINT user_profiles_display_name_not_empty CHECK (char_length(trim(display_name)) > 0)
 );
+
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 
 -- ------------------------------------------------------------
 -- Tabel: chat_rooms
@@ -440,3 +443,13 @@ CREATE TRIGGER on_auth_user_created
 
 GRANT USAGE ON SCHEMA public TO postgres, supabase_auth_admin;
 GRANT ALL ON TABLE public.user_profiles TO postgres, supabase_auth_admin;
+
+-- Bucket foto profil (public read)
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Avatar images are publicly accessible" ON storage.objects;
+CREATE POLICY "Avatar images are publicly accessible"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
