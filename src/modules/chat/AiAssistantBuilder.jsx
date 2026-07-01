@@ -120,7 +120,7 @@ export function KnowledgeDropzone({ files, onAddFiles, onRemoveFile }) {
 
   return (
     <div className="faq-bot-field ai-knowledge-upload">
-      <span className="faq-bot-field__label">Knowledge Base</span>
+      <span className="faq-bot-field__label">Knowledge Base <span className="faq-bot-field__required" aria-hidden>*</span></span>
 
       <div
         className={`ai-knowledge-dropzone${isDragging ? ' ai-knowledge-dropzone--active' : ''}`}
@@ -245,7 +245,7 @@ export default function AiAssistantBuilder({ draft, onChange, onSave, onClose })
 
         <div className="ai-assistant-builder__fields">
           <label className="faq-bot-field">
-            <span className="faq-bot-field__label">Nama AI Assistant</span>
+            <span className="faq-bot-field__label">Nama AI Assistant <span className="faq-bot-field__required" aria-hidden>*</span></span>
             <input
               type="text"
               className="faq-bot-field__input"
@@ -256,7 +256,7 @@ export default function AiAssistantBuilder({ draft, onChange, onSave, onClose })
           </label>
 
           <div className="faq-bot-field">
-            <span className="faq-bot-field__label">Basis LLM</span>
+            <span className="faq-bot-field__label">Basis LLM <span className="faq-bot-field__required" aria-hidden>*</span></span>
             <LlmSelect
               value={draft.llm}
               onChange={(value) => updateField('llm', value)}

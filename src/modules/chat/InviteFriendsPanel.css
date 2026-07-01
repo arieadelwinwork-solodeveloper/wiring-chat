@@ -89,6 +89,11 @@
   letter-spacing: 0.04em;
 }
 
+.invite-friends__required {
+  color: #c41e14;
+  text-transform: none;
+}
+
 .invite-friends__input {
   border: 1px solid #e8e8ed;
   border-radius: 8px;

@@ -160,7 +160,7 @@ export default function CreateGroupBuilder({
 
         <div className="create-group-builder__fields">
           <label className="faq-bot-field">
-            <span className="faq-bot-field__label">Nama group</span>
+            <span className="faq-bot-field__label">Nama group <span className="faq-bot-field__required" aria-hidden>*</span></span>
             <input
               type="text"
               className="faq-bot-field__input"
@@ -171,7 +171,7 @@ export default function CreateGroupBuilder({
           </label>
 
           <div className="faq-bot-field">
-            <span className="faq-bot-field__label">Daftar yang diundang</span>
+            <span className="faq-bot-field__label">Daftar yang diundang <span className="faq-bot-field__required" aria-hidden>*</span></span>
             {availableMembers.length === 0 ? (
               <p className="create-group__empty-members">
                 Belum ada kontak. Undang teman terlebih dahulu.
@@ -212,7 +212,7 @@ export default function CreateGroupBuilder({
           {draft.aiEnabled && (
             <div className="create-group__ai-panel">
               <div className="faq-bot-field">
-                <span className="faq-bot-field__label">Basis LLM</span>
+                <span className="faq-bot-field__label">Basis LLM <span className="faq-bot-field__required" aria-hidden>*</span></span>
                 <LlmSelect
                   value={draft.llm}
                   onChange={(value) => updateField('llm', value)}
@@ -226,7 +226,7 @@ export default function CreateGroupBuilder({
               />
 
               <div className="faq-bot-field">
-                <span className="faq-bot-field__label">Tugas AI</span>
+                <span className="faq-bot-field__label">Tugas AI <span className="faq-bot-field__required" aria-hidden>*</span></span>
                 <div className="create-group__task-options">
                   {AI_TASK_OPTIONS.map((option) => {
                     const selected = draft.tasks.includes(option.value);
@@ -246,7 +246,7 @@ export default function CreateGroupBuilder({
               </div>
 
               <div className="faq-bot-field">
-                <span className="faq-bot-field__label">Waktu respon AI</span>
+                <span className="faq-bot-field__label">Waktu respon AI <span className="faq-bot-field__required" aria-hidden>*</span></span>
                 <div className="create-group__response-modes">
                   {RESPONSE_MODE_OPTIONS.map((option) => (
                     <label key={option.value} className="create-group__response-option">

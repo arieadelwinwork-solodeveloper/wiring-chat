@@ -1,0 +1,60 @@
+.wiring-modal {
+  position: fixed;
+  inset: 0;
+  z-index: var(--wiring-z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--wiring-space-4);
+  box-sizing: border-box;
+}
+
+.wiring-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: var(--wiring-color-backdrop);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+
+.wiring-modal__backdrop:disabled {
+  cursor: not-allowed;
+}
+
+.wiring-modal__panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: var(--wiring-space-5);
+  border-radius: var(--wiring-radius-xl);
+  background: var(--wiring-color-surface-solid);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: var(--wiring-shadow-modal);
+}
+
+.wiring-modal__title {
+  margin: 0 0 var(--wiring-space-2);
+  font-size: var(--wiring-font-size-lg);
+  font-weight: var(--wiring-font-weight-bold);
+  color: var(--wiring-color-primary);
+}
+
+.wiring-modal__body {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--wiring-color-text-muted);
+}
+
+.wiring-modal__body p {
+  margin: 0;
+}
+
+.wiring-modal__footer {
+  display: flex;
+  gap: var(--wiring-space-2);
+  justify-content: flex-end;
+  margin-top: var(--wiring-space-4);
+}

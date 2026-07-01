@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import SkyBackground from '../components/SkyBackground';
+import RecoveryRedirect from '../components/RecoveryRedirect';
 import { useAuth } from '../contexts/AuthContext';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { DEV_ACCOUNTS, showDevLogin } from '../lib/devAccounts';
 import './Login.css';
 
 function EyeToggle({ show, onToggle, disabled, labelShow, labelHide }) {
@@ -32,7 +35,17 @@ function EyeToggle({ show, onToggle, disabled, labelShow, labelHide }) {
 }
 
 export default function Login() {
-  const { session, loading, signIn, signUp, signInWithOApps, isConfigured } = useAuth();
+  const {
+    session,
+    loading,
+    passwordRecoveryPending,
+    signIn,
+    signUp,
+    signInWithOApps,
+    requestMagicLink,
+    requestPasswordResetLink,
+    isConfigured,
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,14 +60,33 @@ export default function Login() {
   const [showRegisterConfirm, setShowRegisterConfirm] = useState(false);
 
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMode, setForgotMode] = useState('magic');
   const [submitting, setSubmitting] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [forgotSending, setForgotSending] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
   const [error, setError] = useState('');
   const [registerError, setRegisterError] = useState('');
+  const [forgotError, setForgotError] = useState('');
   const [registerSuccess, setRegisterSuccess] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(
+    location.state?.passwordResetSuccess ?? location.state?.sessionExpired ?? '',
+  );
 
-  const redirectTo = location.state?.from?.pathname ?? '/chat';
+  useDocumentTitle('Masuk · Wiring');
+
+  /** Selalu ke daftar chat — jangan restore deep link room dari sesi sebelumnya. */
+  const postLoginPath = '/chat';
+
+  useEffect(() => {
+    if (location.state?.passwordResetSuccess || location.state?.sessionExpired) {
+      setLoginSuccess(location.state.passwordResetSuccess ?? location.state.sessionExpired);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -65,20 +97,36 @@ export default function Login() {
   }, []);
 
   useEffect(() => {
-    if (!showRegisterModal) return undefined;
+    if (!showRegisterModal && !showForgotModal) return undefined;
 
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
-        setShowRegisterModal(false);
+        if (showForgotModal) setShowForgotModal(false);
+        else setShowRegisterModal(false);
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showRegisterModal]);
+  }, [showRegisterModal, showForgotModal]);
+
+  if (loading) {
+    return (
+      <div className="login-page">
+        <SkyBackground />
+        <div className="auth-loading">
+          <div className="auth-loading__spinner" aria-hidden />
+          <p>Memuat sesi...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!loading && session) {
-    return <Navigate to={redirectTo} replace />;
+    if (passwordRecoveryPending) {
+      return <RecoveryRedirect />;
+    }
+    return <Navigate to={postLoginPath} replace />;
   }
 
   function openRegisterModal() {
@@ -92,6 +140,50 @@ export default function Login() {
     setShowRegisterModal(false);
   }
 
+  function openForgotModal() {
+    setForgotError('');
+    setForgotSuccess('');
+    setForgotMode('magic');
+    setForgotEmail(email.trim());
+    setShowForgotModal(true);
+  }
+
+  function closeForgotModal() {
+    if (forgotSending) return;
+    setShowForgotModal(false);
+  }
+
+  async function handleForgotSend(mode) {
+    const trimmedEmail = forgotEmail.trim();
+    if (!trimmedEmail) {
+      setForgotError('Masukkan email terdaftar.');
+      return;
+    }
+
+    setForgotError('');
+    setForgotSuccess('');
+    setForgotSending(true);
+    setForgotMode(mode);
+
+    try {
+      if (mode === 'magic') {
+        await requestMagicLink(trimmedEmail);
+        setForgotSuccess('Magic link telah dikirim. Cek inbox email Anda (termasuk folder spam) dan klik link untuk masuk tanpa password. Link berlaku sekali pakai.');
+      } else {
+        await requestPasswordResetLink(trimmedEmail);
+        setForgotSuccess('Link ubah password telah dikirim. Cek inbox email Anda (termasuk folder spam), buat password baru, lalu masuk kembali. Link berlaku sekali pakai.');
+      }
+    } catch (err) {
+      setForgotError(
+        err.message || (mode === 'magic'
+          ? 'Gagal mengirim magic link. Coba lagi.'
+          : 'Gagal mengirim link ubah password. Coba lagi.'),
+      );
+    } finally {
+      setForgotSending(false);
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
@@ -99,9 +191,9 @@ export default function Login() {
 
     try {
       await signIn(email.trim(), password);
-      navigate(redirectTo, { replace: true });
+      navigate(postLoginPath, { replace: true });
     } catch (err) {
-      setError(err.message || 'Login gagal. Periksa Gmail dan password.');
+      setError(err.message || 'Login gagal. Periksa email dan password.');
     } finally {
       setSubmitting(false);
     }
@@ -141,25 +233,31 @@ export default function Login() {
 
       if (data.session) {
         setShowRegisterModal(false);
-        navigate(redirectTo, { replace: true });
+        navigate(postLoginPath, { replace: true });
         return;
       }
 
-      setRegisterSuccess('Akun berhasil dibuat. Cek Gmail untuk verifikasi, lalu masuk.');
-      setRegisterEmail('');
-      setRegisterPassword('');
-      setRegisterConfirm('');
+      const registeredEmail = registerEmail.trim();
+      setShowRegisterModal(false);
+      navigate('/verify-email', { replace: true, state: { email: registeredEmail } });
     } catch (err) {
-      setRegisterError(err.message || 'Pendaftaran gagal. Coba Gmail lain.');
+      setRegisterError(err.message || 'Pendaftaran gagal. Coba email lain.');
     } finally {
       setRegistering(false);
     }
   }
 
-  const formDisabled = submitting || registering || oauthLoading || !isConfigured;
+  const formDisabled = submitting || registering || forgotSending || oauthLoading || !isConfigured;
+
+  function fillDevAccount(account) {
+    setEmail(account.email);
+    setPassword(account.password);
+    setError('');
+    setLoginSuccess('');
+  }
 
   return (
-    <div className={`login-page${showRegisterModal ? ' login-page--modal-open' : ''}`}>
+    <div className={`login-page${showRegisterModal || showForgotModal ? ' login-page--modal-open' : ''}`}>
       <SkyBackground />
 
       <main className="login-page__content">
@@ -178,13 +276,13 @@ export default function Login() {
 
           <form className="login-form" onSubmit={handleSubmit}>
             <label className="login-form__field">
-              <span>Gmail</span>
+              <span>Email <span className="login-form__required" aria-hidden>*</span></span>
               <input
                 type="email"
                 name="email"
                 autoComplete="email"
                 inputMode="email"
-                placeholder="nama@gmail.com"
+                placeholder="nama@email.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -193,7 +291,7 @@ export default function Login() {
             </label>
 
             <div className="login-form__field">
-              <span className="login-form__label">Password</span>
+              <span className="login-form__label">Password <span className="login-form__required" aria-hidden>*</span></span>
               <div className="login-form__password-wrap">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -213,7 +311,19 @@ export default function Login() {
                   labelHide="Sembunyikan password"
                 />
               </div>
+              <button
+                type="button"
+                className="login-form__forgot"
+                onClick={openForgotModal}
+                disabled={formDisabled}
+              >
+                Lupa password?
+              </button>
             </div>
+
+            {loginSuccess && (
+              <p className="login-form__success" role="status">{loginSuccess}</p>
+            )}
 
             {error && <p className="login-form__error" role="alert">{error}</p>}
 
@@ -225,6 +335,27 @@ export default function Login() {
               {submitting ? 'Memproses...' : 'Masuk'}
             </button>
           </form>
+
+          {showDevLogin && (
+            <div className="login-dev-cards" aria-label="Akun dummy pengujian">
+              <p className="login-dev-cards__title">Dev — isi cepat</p>
+              <div className="login-dev-cards__grid">
+                {DEV_ACCOUNTS.map((account) => (
+                  <button
+                    key={account.id}
+                    type="button"
+                    className="login-dev-card"
+                    disabled={formDisabled}
+                    onClick={() => fillDevAccount(account)}
+                  >
+                    <span className="login-dev-card__label">{account.label}</span>
+                    <span className="login-dev-card__email">{account.email}</span>
+                    <span className="login-dev-card__hint">{account.hint}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="login-divider">
             <span>atau</span>
@@ -275,17 +406,17 @@ export default function Login() {
               </button>
             </div>
 
-            <p className="login-modal__subtitle">Buat akun baru dengan Gmail dan password.</p>
+            <p className="login-modal__subtitle">Buat akun baru dengan email dan password.</p>
 
             <form className="login-form login-form--register" onSubmit={handleRegister}>
               <label className="login-form__field">
-                <span>Gmail</span>
+                <span>Email <span className="login-form__required" aria-hidden>*</span></span>
                 <input
                   type="email"
                   name="register-email"
                   autoComplete="email"
                   inputMode="email"
-                  placeholder="nama@gmail.com"
+                  placeholder="nama@email.com"
                   value={registerEmail}
                   onChange={(event) => setRegisterEmail(event.target.value)}
                   required
@@ -295,13 +426,13 @@ export default function Login() {
               </label>
 
               <div className="login-form__field">
-                <span className="login-form__label">Password</span>
+                <span className="login-form__label">Password <span className="login-form__required" aria-hidden>*</span></span>
                 <div className="login-form__password-wrap">
                   <input
                     type={showRegisterPassword ? 'text' : 'password'}
                     name="register-password"
                     autoComplete="new-password"
-                    placeholder="Buat password"
+                    placeholder="Minimal 8 karakter"
                     value={registerPassword}
                     onChange={(event) => setRegisterPassword(event.target.value)}
                     required
@@ -315,10 +446,11 @@ export default function Login() {
                     labelHide="Sembunyikan password"
                   />
                 </div>
+                <p className="login-form__hint">Minimal 8 karakter.</p>
               </div>
 
               <div className="login-form__field">
-                <span className="login-form__label">Konfirmasi password</span>
+                <span className="login-form__label">Konfirmasi password <span className="login-form__required" aria-hidden>*</span></span>
                 <div className="login-form__password-wrap">
                   <input
                     type={showRegisterConfirm ? 'text' : 'password'}
@@ -345,15 +477,133 @@ export default function Login() {
               )}
 
               {registerSuccess && (
-                <p className="login-form__success" role="status">{registerSuccess}</p>
+                <>
+                  <p className="login-form__success" role="status">{registerSuccess}</p>
+                  <button
+                    type="button"
+                    className="login-form__submit login-form__submit--register"
+                    onClick={() => {
+                      setShowRegisterModal(false);
+                      setRegisterSuccess('');
+                    }}
+                  >
+                    Ke halaman masuk
+                  </button>
+                </>
               )}
 
+              {!registerSuccess && (
               <button
                 type="submit"
                 className="login-form__submit login-form__submit--register"
                 disabled={formDisabled}
               >
                 {registering ? 'Mendaftar...' : 'Daftar akun'}
+              </button>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showForgotModal && (
+        <div className="login-modal" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+          <button
+            type="button"
+            className="login-modal__backdrop"
+            onClick={closeForgotModal}
+            aria-label="Tutup popup lupa password"
+            tabIndex={-1}
+          />
+          <div className="login-modal__panel">
+            <div className="login-modal__header">
+              <h2 id="forgot-modal-title" className="login-modal__title">Lupa password</h2>
+              <button
+                type="button"
+                className="login-modal__close"
+                onClick={closeForgotModal}
+                disabled={forgotSending}
+                aria-label="Tutup"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="login-modal__subtitle">
+              Masukkan email terdaftar, lalu pilih cara pemulihan akun.
+            </p>
+
+            <form
+              className="login-form login-form--register"
+              onSubmit={(event) => {
+                event.preventDefault();
+                handleForgotSend(forgotMode);
+              }}
+            >
+              <label className="login-form__field">
+                <span>Email <span className="login-form__required" aria-hidden>*</span></span>
+                <input
+                  type="email"
+                  name="forgot-email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="nama@email.com"
+                  value={forgotEmail}
+                  onChange={(event) => setForgotEmail(event.target.value)}
+                  required
+                  disabled={formDisabled}
+                  autoFocus
+                />
+              </label>
+
+              <fieldset className="login-forgot-options" disabled={formDisabled || Boolean(forgotSuccess)}>
+                <legend className="login-forgot-options__legend">Pilih metode</legend>
+
+                <label className={`login-forgot-option${forgotMode === 'magic' ? ' login-forgot-option--active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="forgot-mode"
+                    value="magic"
+                    checked={forgotMode === 'magic'}
+                    onChange={() => setForgotMode('magic')}
+                    className="login-forgot-option__input"
+                  />
+                  <span className="login-forgot-option__content">
+                    <span className="login-forgot-option__title">Magic link</span>
+                    <span className="login-forgot-option__desc">Masuk langsung tanpa password lewat link di email.</span>
+                  </span>
+                </label>
+
+                <label className={`login-forgot-option${forgotMode === 'reset' ? ' login-forgot-option--active' : ''}`}>
+                  <input
+                    type="radio"
+                    name="forgot-mode"
+                    value="reset"
+                    checked={forgotMode === 'reset'}
+                    onChange={() => setForgotMode('reset')}
+                    className="login-forgot-option__input"
+                  />
+                  <span className="login-forgot-option__content">
+                    <span className="login-forgot-option__title">Link ubah password</span>
+                    <span className="login-forgot-option__desc">Halaman password baru, lalu masuk ulang dengan password baru.</span>
+                  </span>
+                </label>
+              </fieldset>
+
+              {forgotError && (
+                <p className="login-form__error" role="alert">{forgotError}</p>
+              )}
+
+              {forgotSuccess && (
+                <p className="login-form__success" role="status">{forgotSuccess}</p>
+              )}
+
+              <button
+                type="submit"
+                className="login-form__submit login-form__submit--register"
+                disabled={formDisabled || Boolean(forgotSuccess)}
+              >
+                {forgotSending ? 'Mengirim...' : 'Konfirmasi'}
               </button>
             </form>
           </div>

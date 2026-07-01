@@ -1,0 +1,121 @@
+.wiring-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wiring-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--wiring-radius-lg);
+  font-family: var(--wiring-font-family);
+  font-weight: var(--wiring-font-weight-semibold);
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--wiring-transition-normal),
+    color var(--wiring-transition-normal),
+    border-color var(--wiring-transition-normal),
+    box-shadow var(--wiring-transition-normal),
+    transform var(--wiring-transition-fast),
+    opacity var(--wiring-transition-fast);
+  box-sizing: border-box;
+}
+
+.wiring-btn--sm {
+  padding: 6px 12px;
+  font-size: var(--wiring-font-size-sm);
+  border-radius: var(--wiring-radius-sm);
+}
+
+.wiring-btn--md {
+  padding: 11px 16px;
+  font-size: var(--wiring-font-size-md);
+}
+
+.wiring-btn--lg {
+  padding: 12px 20px;
+  font-size: var(--wiring-font-size-md);
+  border-radius: var(--wiring-radius-xl);
+}
+
+.wiring-btn--full {
+  width: 100%;
+}
+
+.wiring-btn--primary {
+  background: var(--wiring-color-primary);
+  color: var(--wiring-color-white);
+  box-shadow: var(--wiring-shadow-sm);
+}
+
+.wiring-btn--primary:hover:not(:disabled) {
+  background: var(--wiring-color-primary-hover);
+}
+
+.wiring-btn--secondary {
+  background: rgba(10, 37, 64, 0.06);
+  color: var(--wiring-color-primary);
+}
+
+.wiring-btn--secondary:hover:not(:disabled) {
+  background: rgba(10, 37, 64, 0.1);
+}
+
+.wiring-btn--danger {
+  background: var(--wiring-color-danger);
+  color: var(--wiring-color-white);
+}
+
+.wiring-btn--danger:hover:not(:disabled) {
+  background: var(--wiring-color-danger-hover);
+}
+
+.wiring-btn--link {
+  background: var(--wiring-color-primary);
+  color: var(--wiring-color-white);
+  box-shadow: var(--wiring-shadow-sm);
+  text-align: center;
+}
+
+.wiring-btn--link:hover:not(:disabled) {
+  background: var(--wiring-color-primary-hover);
+}
+
+.wiring-btn--ghost {
+  background: transparent;
+  color: var(--wiring-color-accent);
+  border-color: currentColor;
+}
+
+.wiring-btn--ghost:hover:not(:disabled) {
+  color: var(--wiring-color-accent-hover);
+}
+
+.wiring-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.wiring-btn:disabled,
+.wiring-btn[aria-disabled='true'] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.wiring-btn__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: var(--wiring-color-white);
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.wiring-btn--secondary .wiring-btn__spinner {
+  border-color: rgba(10, 37, 64, 0.15);
+  border-top-color: var(--wiring-color-primary);
+}
+
+.wiring-btn--loading .wiring-btn__label {
+  opacity: 0.95;
+}

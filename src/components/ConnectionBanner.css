@@ -1,0 +1,56 @@
+.connection-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 10;
+}
+
+.connection-banner--offline {
+  background: var(--wiring-color-offline-bg);
+  color: var(--wiring-color-offline-text);
+  border-bottom: 1px solid var(--wiring-color-offline-border);
+}
+
+.connection-banner--error {
+  background: var(--wiring-color-danger-bg);
+  color: var(--wiring-color-danger);
+  border-bottom: 1px solid var(--wiring-color-danger-border);
+}
+
+.connection-banner__content {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.connection-banner__icon {
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.connection-banner__message {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.connection-banner__retry {
+  border-color: currentColor;
+  color: inherit;
+}
+
+.connection-banner__retry .wiring-btn__spinner {
+  border-color: rgba(0, 0, 0, 0.15);
+  border-top-color: currentColor;
+}

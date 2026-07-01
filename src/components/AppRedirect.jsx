@@ -11,9 +11,8 @@ function AuthLoadingScreen() {
   );
 }
 
-export default function ProtectedRoute({ children }) {
+export default function AppRedirect() {
   const { session, loading, passwordRecoveryPending } = useAuth();
-  const location = useLocation();
 
   if (loading) {
     return <AuthLoadingScreen />;
@@ -23,9 +22,9 @@ export default function ProtectedRoute({ children }) {
     return <RecoveryRedirect />;
   }
 
-  if (!session) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+  if (session) {
+    return <Navigate to="/chat" replace />;
   }
 
-  return children;
+  return <Navigate to="/login" replace />;
 }

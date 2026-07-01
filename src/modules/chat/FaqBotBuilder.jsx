@@ -145,7 +145,7 @@ export default function FaqBotBuilder({ draft, onChange, onSave, onClose }) {
       <div className="faq-bot-builder__body">
         <div className="faq-bot-builder__fields">
           <label className="faq-bot-field">
-            <span className="faq-bot-field__label">Nama</span>
+            <span className="faq-bot-field__label">Nama <span className="faq-bot-field__required" aria-hidden>*</span></span>
             <input
               type="text"
               className="faq-bot-field__input"

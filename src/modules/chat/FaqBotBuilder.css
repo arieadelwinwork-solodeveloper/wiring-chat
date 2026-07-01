@@ -76,6 +76,11 @@
   letter-spacing: 0.04em;
 }
 
+.faq-bot-field__required {
+  color: #c41e14;
+  text-transform: none;
+}
+
 .faq-bot-field__input {
   border: 1px solid #e8e8ed;
   border-radius: 10px;

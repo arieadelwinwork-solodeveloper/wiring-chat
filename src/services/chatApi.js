@@ -1,4 +1,16 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
+const REQUEST_TIMEOUT_MS = 15000;
+
+let onUnauthorized = null;
+
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler;
+}
+
+export function isNetworkErrorMessage(message) {
+  if (!message) return false;
+  return /koneksi|internet|batas waktu|timeout|failed to fetch|network/i.test(message);
+}
 
 function getAuthHeaders() {
   const token = localStorage.getItem('wiring_access_token');
@@ -8,18 +20,45 @@ function getAuthHeaders() {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { ...getAuthHeaders(), ...options.headers },
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  const data = await response.json().catch(() => ({}));
+  try {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: { ...getAuthHeaders(), ...options.headers },
+    });
 
-  if (!response.ok) {
-    throw new Error(data.error ?? 'Terjadi kesalahan sistem');
+    const data = await response.json().catch(() => ({}));
+
+    if (response.status === 401) {
+      onUnauthorized?.();
+      throw new Error('Sesi berakhir. Silakan masuk kembali.');
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error ?? 'Terjadi kesalahan sistem');
+    }
+
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Permintaan melebihi batas waktu. Periksa koneksi Anda.');
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      throw new Error('Tidak ada koneksi internet. Periksa jaringan Anda.');
+    }
+
+    if (err instanceof TypeError) {
+      throw new Error('Gagal menghubungi server. Periksa koneksi Anda.');
+    }
+
+    throw err;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  return data;
 }
 
 export const chatApi = {

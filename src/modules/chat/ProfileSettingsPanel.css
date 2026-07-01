@@ -109,6 +109,11 @@
   letter-spacing: 0.04em;
 }
 
+.profile-settings__required {
+  color: #c41e14;
+  text-transform: none;
+}
+
 .profile-settings__input {
   border: 1px solid #e8e8ed;
   border-radius: 8px;
@@ -183,8 +188,21 @@
 }
 
 .profile-settings__submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   background: #0a2540;
   color: #ffffff;
+}
+
+.profile-settings__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+  flex-shrink: 0;
 }
 
 .profile-settings__submit:disabled,

@@ -139,7 +139,7 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
         </p>
 
         <label className="invite-friends__field">
-          <span className="invite-friends__label">Nomor ID</span>
+          <span className="invite-friends__label">Nomor ID <span className="invite-friends__required" aria-hidden>*</span></span>
           <input
             type="text"
             className="invite-friends__input"
@@ -160,7 +160,7 @@ export default function InviteFriendsForm({ onAddContact, onClose }) {
         </label>
 
         <label className="invite-friends__field">
-          <span className="invite-friends__label">Nama kontak</span>
+          <span className="invite-friends__label">Nama kontak <span className="invite-friends__required" aria-hidden>*</span></span>
           <input
             type="text"
             className="invite-friends__input"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import AiAssistantBuilder, {
   createAiAssistantDraft,
   formatKnowledgeFilesSummary,
@@ -33,12 +33,19 @@ import MessageHoldMenu from './MessageHoldMenu';
 import './MessageHoldMenu.css';
 import MessageSelectionBar from './MessageSelectionBar';
 import './MessageSelectionBar.css';
-import { formatMessagesForCopy } from './messageFormat';
+import { formatMessagesForCopy, groupMessagesByDate } from './messageFormat';
+import { MessageListSkeleton, RoomListSkeleton } from './ChatSkeleton';
+import './ChatSkeleton.css';
 import './InternalChatBoard.css';
+import ConfirmModal from '../../components/ConfirmModal';
+import ConnectionBanner from '../../components/ConnectionBanner';
 import { useChatBackend } from '../../hooks/useChatBackend';
+import { useDocumentTitle } from '../../hooks/useDocumentTitle';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getOrCreateLocalNomorId } from '../../lib/nomorId';
 import {
   chatApi,
+  isNetworkErrorMessage,
   mapAiPayloadFromDraft,
   mapContactPayloadFromForm,
   mapFaqPayloadFromDraft,
@@ -297,14 +304,24 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-export default function InternalChatBoard({ role: defaultRole = 'user' }) {
+export default function InternalChatBoard({
+  role: defaultRole = 'user',
+  initialRoomId = null,
+  onRoomChange,
+}) {
   const backend = useChatBackend(defaultRole);
+  const { isOnline } = useNetworkStatus();
   const role = backend.profile?.role ?? defaultRole;
+  const deepLinkHandledRef = useRef(false);
   const [activeRoomId, setActiveRoomId] = useState(null);
   const [draft, setDraft] = useState('');
   const [currentUser, setCurrentUser] = useState(DEFAULT_USER);
   const [bots, setBots] = useState(DEFAULT_BOTS);
-  const [botNotice, setBotNotice] = useState('');
+  const [notice, setNotice] = useState(null);
+  const noticeTimerRef = useRef(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const [botCodeCounter, setBotCodeCounter] = useState(1);
   const [faqBotDraft, setFaqBotDraft] = useState(null);
   const [showFaqBuilder, setShowFaqBuilder] = useState(false);
@@ -401,20 +418,82 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     return [...groupRooms, ...contactRooms, ...botRooms];
   }, [backend.useApi, backend.rooms, backend.ownerBots, role, groupRooms, contactRooms, botRooms]);
 
-  useEffect(() => {
-    if (!chatRooms.length) {
-      if (activeRoomId) setActiveRoomId(null);
-      return;
-    }
-    if (!activeRoomId || !chatRooms.find((room) => room.id === activeRoomId)) {
-      setActiveRoomId(chatRooms[0].id);
-    }
-  }, [chatRooms, activeRoomId]);
-
   const activeRoom = chatRooms.find((room) => room.id === activeRoomId);
   const messages = backend.useApi
     ? (backend.messagesByRoom[activeRoomId] ?? [])
     : (botMessages[activeRoomId] ?? []);
+
+  const messagesLoading = backend.useApi
+    && activeRoomId
+    && backend.messagesLoadingRoomId === activeRoomId;
+
+  const messageGroups = useMemo(
+    () => groupMessagesByDate(messages),
+    [messages],
+  );
+
+  useDocumentTitle(activeRoom ? `${activeRoom.nama_room} · Wiring` : 'Chat · Wiring');
+
+  function showNotice(text, type = 'success') {
+    if (noticeTimerRef.current) {
+      window.clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = null;
+    }
+    setNotice({ text, type });
+    const delay = type === 'error' ? 8000 : 3000;
+    noticeTimerRef.current = window.setTimeout(() => {
+      setNotice(null);
+      noticeTimerRef.current = null;
+    }, delay);
+  }
+
+  function dismissNotice() {
+    if (noticeTimerRef.current) {
+      window.clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = null;
+    }
+    setNotice(null);
+  }
+
+  useEffect(() => {
+    if (initialRoomId) return;
+
+    deepLinkHandledRef.current = false;
+    setActiveRoomId(null);
+    setMobileShowChat(false);
+  }, [initialRoomId]);
+
+  useEffect(() => {
+    if (!chatRooms.length) {
+      if (activeRoomId && !initialRoomId) {
+        setActiveRoomId(null);
+        setMobileShowChat(false);
+      }
+      return;
+    }
+
+    if (initialRoomId && !deepLinkHandledRef.current && !backend.loading) {
+      deepLinkHandledRef.current = true;
+      const targetRoom = chatRooms.find((room) => room.id === initialRoomId);
+      if (targetRoom) {
+        setActiveRoomId(initialRoomId);
+        setMobileShowChat(true);
+        return;
+      }
+
+      setActiveRoomId(null);
+      setMobileShowChat(false);
+      showNotice('Percakapan tidak ditemukan atau Anda tidak memiliki akses.', 'error');
+      onRoomChange?.(null);
+      return;
+    }
+
+    if (!initialRoomId && activeRoomId && !chatRooms.find((room) => room.id === activeRoomId)) {
+      setActiveRoomId(null);
+      setMobileShowChat(false);
+      onRoomChange?.(null);
+    }
+  }, [chatRooms, activeRoomId, initialRoomId, backend.loading, onRoomChange]);
 
   useEffect(() => {
     cancelMessageAction();
@@ -470,21 +549,30 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
 
     try {
       await navigator.clipboard.writeText(text);
-      setBotNotice(`${selected.length} pesan disalin.`);
+      showNotice(`${selected.length} pesan disalin.`);
     } catch {
-      setBotNotice('Gagal menyalin pesan.');
+      showNotice('Gagal menyalin pesan.', 'error');
     }
 
-    window.setTimeout(() => setBotNotice(''), 3000);
     cancelMessageAction();
   }
 
-  async function handleConfirmDeleteMessages() {
+  function handleConfirmDeleteMessages() {
     const ids = [...selectedMessageIds];
     if (!ids.length) return;
 
-    await Promise.all(ids.map((id) => handleDeleteMessage(id)));
-    cancelMessageAction();
+    setConfirmDialog({
+      title: 'Hapus pesan?',
+      message: `Hapus ${ids.length} pesan? Tindakan tidak dapat dibatalkan.`,
+      danger: true,
+      confirmLabel: 'Hapus',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await Promise.all(ids.map((id) => handleDeleteMessage(id)));
+        cancelMessageAction();
+        showNotice(`${ids.length} pesan dihapus.`);
+      },
+    });
   }
 
   function closePanels() {
@@ -502,6 +590,34 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     closePanels();
     cancelMessageAction();
     setActiveRoomId(roomId);
+    setMobileShowChat(true);
+    onRoomChange?.(roomId);
+  }
+
+  function handleMobileBack() {
+    setMobileShowChat(false);
+    cancelMessageAction();
+    setActiveRoomId(null);
+    onRoomChange?.(null);
+  }
+
+  function requestDeleteRoom(roomId) {
+    const room = sidebarRooms.find((item) => item.id === roomId);
+    setConfirmDialog({
+      title: 'Hapus percakapan?',
+      message: room
+        ? `Hapus "${room.nama_room}" dari daftar?`
+        : 'Hapus percakapan ini dari daftar?',
+      danger: true,
+      confirmLabel: 'Hapus',
+      onConfirm: () => {
+        handleDeleteRoom(roomId);
+        setConfirmDialog(null);
+        if (activeRoomId === roomId) {
+          setMobileShowChat(false);
+        }
+      },
+    });
   }
 
   function handleDeleteRoom(roomId) {
@@ -519,26 +635,32 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     }
 
     if (activeRoomId === roomId) {
-      setActiveRoomId(remaining[0]?.id ?? '');
+      setActiveRoomId(null);
+      setMobileShowChat(false);
+      onRoomChange?.(null);
     }
   }
 
   function handleOpenInviteForm() {
     closePanels();
     setShowInviteForm(true);
+    setMobileShowChat(true);
   }
 
   function handleCloseInviteForm() {
     setShowInviteForm(false);
+    setMobileShowChat(Boolean(activeRoomId));
   }
 
   function handleOpenProfileSettings() {
     closePanels();
     setShowProfileSettings(true);
+    setMobileShowChat(true);
   }
 
   function handleCloseProfileSettings() {
     setShowProfileSettings(false);
+    setMobileShowChat(Boolean(activeRoomId));
   }
 
   async function handleSaveProfile({ name, avatarColor, imageData, removePhoto }) {
@@ -581,11 +703,9 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
 
       setCurrentUser(nextUser);
       setShowProfileSettings(false);
-      setBotNotice('Profil berhasil disimpan.');
-      window.setTimeout(() => setBotNotice(''), 3000);
+      showNotice('Profil berhasil disimpan.');
     } catch (err) {
-      setBotNotice(err.message || 'Gagal menyimpan profil');
-      window.setTimeout(() => setBotNotice(''), 3000);
+      showNotice(err.message || 'Gagal menyimpan profil', 'error');
     } finally {
       setProfileSaving(false);
     }
@@ -595,11 +715,13 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     closePanels();
     setGroupDraft(createGroupDraft());
     setShowGroupBuilder(true);
+    setMobileShowChat(true);
   }
 
   function handleCloseGroupBuilder() {
     setShowGroupBuilder(false);
     setGroupDraft(null);
+    setMobileShowChat(Boolean(activeRoomId));
   }
 
   function handleSaveGroup() {
@@ -623,13 +745,11 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         .then(async ({ group }) => {
           await backend.refreshRooms();
           setActiveRoomId(group.id);
-          setBotNotice(`Grup "${group.nama}" berhasil dibuat.`);
-          window.setTimeout(() => setBotNotice(''), 3000);
+          showNotice(`Grup "${group.nama}" berhasil dibuat.`);
           handleCloseGroupBuilder();
         })
         .catch((err) => {
-          setBotNotice(err.message);
-          window.setTimeout(() => setBotNotice(''), 3000);
+          showNotice(err.message, 'error');
         });
       return;
     }
@@ -668,8 +788,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       }],
     }));
     setActiveRoomId(groupId);
-    setBotNotice(`Grup "${group.nama}" berhasil dibuat.`);
-    window.setTimeout(() => setBotNotice(''), 3000);
+    showNotice(`Grup "${group.nama}" berhasil dibuat.`);
     handleCloseGroupBuilder();
   }
 
@@ -707,8 +826,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         const roomId = saved.roomId ?? saved.room_id;
         openChatRoom(roomId);
       } catch (err) {
-        setBotNotice(err.message);
-        window.setTimeout(() => setBotNotice(''), 3000);
+        showNotice(err.message, 'error');
         throw err;
       }
       return;
@@ -731,6 +849,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       setFaqBotDraft(createFaqBotDraft(`${botCodeCounter}-BOT`));
     }
     setShowFaqBuilder(true);
+    setMobileShowChat(true);
   }
 
   function handleOpenAiAssistant() {
@@ -745,6 +864,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       setAiAssistantDraft(createAiAssistantDraft());
     }
     setShowAiBuilder(true);
+    setMobileShowChat(true);
   }
 
   function handleToggleAgentOnline(agentId) {
@@ -765,9 +885,21 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     });
   }
 
-  function handleDeleteAgent(agentId) {
-    if (!window.confirm('Hapus agent ini? Tindakan tidak dapat dibatalkan.')) return;
+  function requestDeleteAgent(agentId) {
+    const label = agentId === 'faq' ? 'Bot FAQ' : 'AI Assistant';
+    setConfirmDialog({
+      title: 'Hapus agent?',
+      message: `Hapus ${label}? Tindakan tidak dapat dibatalkan.`,
+      danger: true,
+      confirmLabel: 'Hapus',
+      onConfirm: () => {
+        executeDeleteAgent(agentId);
+        setConfirmDialog(null);
+      },
+    });
+  }
 
+  function executeDeleteAgent(agentId) {
     setBots((prev) => {
       if (agentId === 'faq') {
         return { ...prev, faq: { ...DEFAULT_BOTS.faq } };
@@ -789,8 +921,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       return next;
     });
 
-    setBotNotice('Agent berhasil dihapus.');
-    window.setTimeout(() => setBotNotice(''), 3000);
+    showNotice('Agent berhasil dihapus.');
   }
 
   function handleAddKnowledgeFiles(agentId, newFiles) {
@@ -818,11 +949,13 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   function handleCloseFaqBuilder() {
     setShowFaqBuilder(false);
     setFaqBotDraft(null);
+    setMobileShowChat(Boolean(activeRoomId));
   }
 
   function handleCloseAiBuilder() {
     setShowAiBuilder(false);
     setAiAssistantDraft(null);
+    setMobileShowChat(Boolean(activeRoomId));
   }
 
   function handleSaveFaqBot() {
@@ -844,13 +977,11 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
             },
           }));
           setActiveRoomId(bot.roomId);
-          setBotNotice(`Bot FAQ "${bot.nama}" (${bot.kodeId}) berhasil disimpan.`);
-          window.setTimeout(() => setBotNotice(''), 3000);
+          showNotice(`Bot FAQ "${bot.nama}" (${bot.kodeId}) berhasil disimpan.`);
           handleCloseFaqBuilder();
         })
         .catch((err) => {
-          setBotNotice(err.message);
-          window.setTimeout(() => setBotNotice(''), 3000);
+          showNotice(err.message, 'error');
         });
       return;
     }
@@ -882,8 +1013,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
     }));
     setBotCodeCounter((prev) => prev + 1);
     setActiveRoomId(roomId);
-    setBotNotice(`Bot FAQ "${botName}" (${faqBotDraft.kodeId}) berhasil disimpan.`);
-    window.setTimeout(() => setBotNotice(''), 3000);
+    showNotice(`Bot FAQ "${botName}" (${faqBotDraft.kodeId}) berhasil disimpan.`);
     handleCloseFaqBuilder();
   }
 
@@ -909,13 +1039,11 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
             },
           }));
           setActiveRoomId(bot.roomId);
-          setBotNotice(`AI Assistant "${bot.nama}" berhasil digenerate.`);
-          window.setTimeout(() => setBotNotice(''), 3000);
+          showNotice(`AI Assistant "${bot.nama}" berhasil digenerate.`);
           handleCloseAiBuilder();
         })
         .catch((err) => {
-          setBotNotice(err.message);
-          window.setTimeout(() => setBotNotice(''), 3000);
+          showNotice(err.message, 'error');
         });
       return;
     }
@@ -950,8 +1078,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
       }],
     }));
     setActiveRoomId('bot-ai-assistant');
-    setBotNotice(`AI Assistant "${aiName}" berhasil digenerate.`);
-    window.setTimeout(() => setBotNotice(''), 3000);
+    showNotice(`AI Assistant "${aiName}" berhasil digenerate.`);
     handleCloseAiBuilder();
   }
 
@@ -973,8 +1100,7 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
           ...prev,
           [activeRoomId]: previousMessages,
         }));
-        setBotNotice(err.message || 'Gagal menghapus pesan');
-        window.setTimeout(() => setBotNotice(''), 3000);
+        showNotice(err.message || 'Gagal menghapus pesan', 'error');
       }
       return;
     }
@@ -986,10 +1112,16 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
   }
 
   async function handleSendMessage() {
-    if (!draft.trim() || !activeRoomId) return;
+    if (!draft.trim() || !activeRoomId || sendingMessage) return;
+
+    if (backend.useApi && !isOnline) {
+      showNotice('Tidak ada koneksi internet. Pesan tidak dapat dikirim.', 'error');
+      return;
+    }
 
     const text = draft.trim();
     setDraft('');
+    setSendingMessage(true);
 
     if (backend.useApi) {
       try {
@@ -997,9 +1129,10 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         await backend.loadMessages(activeRoomId);
         await backend.refreshRooms();
       } catch (err) {
-        setBotNotice(err.message);
-        window.setTimeout(() => setBotNotice(''), 3000);
+        showNotice(err.message, 'error');
         setDraft(text);
+      } finally {
+        setSendingMessage(false);
       }
       return;
     }
@@ -1018,10 +1151,76 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         },
       ],
     }));
+    setSendingMessage(false);
+  }
+
+  function handleDraftKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSendMessage();
+    }
+  }
+
+  const mobileShowDetail = mobileShowChat
+    || showProfileSettings
+    || showInviteForm
+    || showGroupBuilder
+    || showFaqBuilder
+    || showAiBuilder;
+
+  const showOfflineBanner = chatApi.isEnabled() && !isOnline;
+
+  const connectionErrorMessage = backend.fetchError
+    ?? ((!backend.useApi && backend.error) ? backend.error : null);
+
+  const showConnectionRetryBanner = chatApi.isEnabled()
+    && isOnline
+    && connectionErrorMessage
+    && isNetworkErrorMessage(connectionErrorMessage);
+
+  const showLocalFallbackBanner = Boolean(
+    backend.error
+    && !isNetworkErrorMessage(backend.error)
+    && !backend.useApi
+    && !backend.loading,
+  );
+
+  async function handleConnectionRetry() {
+    const ok = await backend.retryConnection(activeRoomId);
+    if (ok) {
+      backend.clearFetchError();
+      showNotice('Koneksi dipulihkan.');
+      return;
+    }
+
+    const message = backend.error ?? backend.fetchError;
+    if (message) {
+      showNotice(message, 'error');
+    }
   }
 
   return (
-    <div className="internal-chat-board">
+    <div className={`internal-chat-board${mobileShowDetail ? ' internal-chat-board--room-open' : ''}`}>
+      {showOfflineBanner && (
+        <ConnectionBanner mode="offline" canRetry={false} />
+      )}
+
+      {showConnectionRetryBanner && (
+        <ConnectionBanner
+          mode="error"
+          message={connectionErrorMessage}
+          onRetry={handleConnectionRetry}
+          retrying={backend.retrying}
+        />
+      )}
+
+      {showLocalFallbackBanner && (
+        <div className="chat-board-banner chat-board-banner--error" role="alert">
+          <span>{backend.error}</span>
+          <span className="chat-board-banner__hint">Menggunakan mode lokal.</span>
+        </div>
+      )}
+
       <aside className="chat-sidebar">
         <div className="chat-sidebar__header">
           <h2 className="chat-sidebar__title">Internal Chat</h2>
@@ -1037,14 +1236,37 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
             onOpenFaqBuilder={handleOpenFaqBuilder}
             onOpenAiAssistant={handleOpenAiAssistant}
             onToggleAgentOnline={handleToggleAgentOnline}
-            onDeleteAgent={handleDeleteAgent}
+            onDeleteAgent={requestDeleteAgent}
             onAddKnowledgeFiles={handleAddKnowledgeFiles}
             onRemoveKnowledgeFile={handleRemoveKnowledgeFile}
           />
-          {botNotice && <p className="chat-owner-notice">{botNotice}</p>}
+          {notice && (
+            <p className={`chat-owner-notice${notice.type === 'error' ? ' chat-owner-notice--error' : ''}`}>
+              <span>{notice.text}</span>
+              {notice.type === 'error' && (
+                <button type="button" className="chat-owner-notice__dismiss" onClick={dismissNotice}>
+                  Tutup
+                </button>
+              )}
+            </p>
+          )}
         </div>
 
         <div className="chat-sidebar__scroll">
+        {backend.loading ? (
+          <RoomListSkeleton />
+        ) : sidebarRooms.length === 0 ? (
+          <div className="chat-sidebar-empty">
+            <p>Belum ada percakapan.</p>
+            {role === 'owner' ? (
+              <button type="button" className="chat-sidebar-empty__cta" onClick={handleOpenInviteForm}>
+                Mulai percakapan
+              </button>
+            ) : (
+              <p className="chat-sidebar-empty__hint">Undang teman atau tunggu undangan dari owner.</p>
+            )}
+          </div>
+        ) : (
         <ul className="chat-room-list">
           {sidebarRooms.map((room) => (
             <SwipeableRoomItem
@@ -1053,10 +1275,11 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
               isActive={room.id === activeRoomId}
               showAsBot={room.isBot && role === 'owner'}
               onSelect={handleSelectRoom}
-              onDelete={handleDeleteRoom}
+              onDelete={requestDeleteRoom}
             />
           ))}
         </ul>
+        )}
         </div>
       </aside>
 
@@ -1098,6 +1321,14 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
         ) : activeRoom ? (
           <>
             <header className="chat-main__header">
+              <button
+                type="button"
+                className="chat-main__back"
+                onClick={handleMobileBack}
+                aria-label="Kembali ke daftar percakapan"
+              >
+                ‹
+              </button>
               <div
                 className="chat-main__header-avatar"
                 style={{ background: activeRoom.avatar }}
@@ -1125,21 +1356,31 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
             </header>
 
             <div className={`chat-messages${messageActionMode ? ' chat-messages--selection-mode' : ''}`}>
-              <div className="chat-date-divider">
-                <span>Hari ini</span>
-              </div>
-              {messages.map((msg) => (
-                <ChatMessageBubble
-                  key={msg.id}
-                  message={msg}
-                  currentUserName={currentUser.name}
-                  currentUserId="user-me"
-                  selectionMode={Boolean(messageActionMode)}
-                  isSelected={selectedMessageIds.has(msg.id)}
-                  onHold={handleMessageHold}
-                  onToggleSelect={toggleMessageSelection}
-                />
-              ))}
+              {messagesLoading ? (
+                <MessageListSkeleton />
+              ) : messages.length === 0 ? (
+                <div className="chat-messages-empty">Belum ada pesan — kirim sapaan pertama.</div>
+              ) : (
+                messageGroups.map((group) => (
+                  <Fragment key={group.dateKey}>
+                    <div className="chat-date-divider">
+                      <span>{group.dateLabel}</span>
+                    </div>
+                    {group.messages.map((msg) => (
+                      <ChatMessageBubble
+                        key={msg.id}
+                        message={msg}
+                        currentUserName={currentUser.name}
+                        currentUserId="user-me"
+                        selectionMode={Boolean(messageActionMode)}
+                        isSelected={selectedMessageIds.has(msg.id)}
+                        onHold={handleMessageHold}
+                        onToggleSelect={toggleMessageSelection}
+                      />
+                    ))}
+                  </Fragment>
+                ))
+              )}
             </div>
 
             {holdMenu && (
@@ -1169,17 +1410,23 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
                 rows={1}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={handleDraftKeyDown}
+                disabled={sendingMessage || (backend.useApi && !isOnline)}
               />
               <button
                 type="button"
                 className="chat-input-area__send"
-                disabled={!draft.trim()}
+                disabled={!draft.trim() || sendingMessage || (backend.useApi && !isOnline)}
                 onClick={handleSendMessage}
                 aria-label="Kirim pesan"
               >
+                {sendingMessage ? (
+                  <span className="chat-input-area__spinner" aria-hidden />
+                ) : (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
                 </svg>
+                )}
               </button>
             </div>
             )}
@@ -1188,6 +1435,16 @@ export default function InternalChatBoard({ role: defaultRole = 'user' }) {
           <div className="chat-empty">Pilih ruangan untuk memulai obrolan</div>
         )}
       </main>
+
+      <ConfirmModal
+        open={Boolean(confirmDialog)}
+        title={confirmDialog?.title ?? ''}
+        message={confirmDialog?.message}
+        danger={confirmDialog?.danger}
+        confirmLabel={confirmDialog?.confirmLabel}
+        onConfirm={() => confirmDialog?.onConfirm?.()}
+        onCancel={() => setConfirmDialog(null)}
+      />
     </div>
   );
 }

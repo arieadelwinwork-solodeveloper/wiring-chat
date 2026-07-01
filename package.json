@@ -12,7 +12,8 @@
     "dev:all": "npm run dev:server & npm run dev",
     "build": "vite build",
     "preview": "vite preview",
-    "start:server": "node --env-file=.env server/index.js"
+    "start:server": "node --env-file=.env server/index.js",
+    "smoke:test": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

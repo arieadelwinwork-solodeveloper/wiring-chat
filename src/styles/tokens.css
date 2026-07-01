@@ -1,0 +1,79 @@
+:root {
+  /* Colors — brand */
+  --wiring-color-primary: #0a2540;
+  --wiring-color-primary-hover: #123a5c;
+  --wiring-color-accent: #007aff;
+  --wiring-color-accent-hover: #0056b3;
+  --wiring-color-sky: #00aff0;
+  --wiring-color-sky-bg: #e8f7ff;
+
+  /* Colors — text */
+  --wiring-color-text: #1d1d1f;
+  --wiring-color-text-muted: rgba(10, 37, 64, 0.72);
+  --wiring-color-text-subtle: rgba(10, 37, 64, 0.55);
+  --wiring-color-label: rgba(10, 37, 64, 0.85);
+
+  /* Colors — semantic */
+  --wiring-color-danger: #c41e14;
+  --wiring-color-danger-hover: #a31810;
+  --wiring-color-danger-bg: rgba(255, 59, 48, 0.1);
+  --wiring-color-danger-border: rgba(255, 59, 48, 0.22);
+  --wiring-color-success: #2e7d32;
+  --wiring-color-success-bg: #e8f5e9;
+  --wiring-color-warn: #8a5200;
+  --wiring-color-warn-bg: rgba(255, 149, 0, 0.12);
+  --wiring-color-warn-border: rgba(255, 149, 0, 0.25);
+  --wiring-color-offline-bg: #fff8e6;
+  --wiring-color-offline-text: #7a5c00;
+  --wiring-color-offline-border: #f0e0b0;
+
+  /* Colors — surfaces */
+  --wiring-color-white: #ffffff;
+  --wiring-color-surface: rgba(255, 255, 255, 0.38);
+  --wiring-color-surface-solid: rgba(255, 255, 255, 0.95);
+  --wiring-color-surface-muted: #f5f5f7;
+  --wiring-color-border: rgba(255, 255, 255, 0.72);
+  --wiring-color-border-subtle: #e8e8ed;
+  --wiring-color-backdrop: rgba(10, 37, 64, 0.35);
+
+  /* Typography */
+  --wiring-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --wiring-font-size-xs: 11px;
+  --wiring-font-size-sm: 12px;
+  --wiring-font-size-md: 14px;
+  --wiring-font-size-lg: 17px;
+  --wiring-font-size-xl: 22px;
+  --wiring-font-weight-semibold: 600;
+  --wiring-font-weight-bold: 700;
+
+  /* Spacing */
+  --wiring-space-1: 4px;
+  --wiring-space-2: 8px;
+  --wiring-space-3: 12px;
+  --wiring-space-4: 16px;
+  --wiring-space-5: 20px;
+  --wiring-space-6: 24px;
+
+  /* Radius */
+  --wiring-radius-sm: 8px;
+  --wiring-radius-md: 11px;
+  --wiring-radius-lg: 12px;
+  --wiring-radius-xl: 18px;
+  --wiring-radius-2xl: 22px;
+  --wiring-radius-pill: 999px;
+
+  /* Shadows */
+  --wiring-shadow-sm: 0 4px 14px rgba(10, 37, 64, 0.22);
+  --wiring-shadow-md: 0 8px 32px rgba(0, 80, 140, 0.12);
+  --wiring-shadow-lg: 0 16px 48px rgba(0, 80, 140, 0.22);
+  --wiring-shadow-modal: 0 16px 48px rgba(0, 80, 140, 0.22);
+
+  /* Effects */
+  --wiring-blur-glass: blur(18px);
+  --wiring-transition-fast: 0.15s ease;
+  --wiring-transition-normal: 0.2s ease;
+
+  /* Z-index */
+  --wiring-z-modal: 200;
+  --wiring-z-banner: 10;
+}

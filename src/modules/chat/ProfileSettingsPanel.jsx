@@ -121,7 +121,7 @@ export default function ProfileSettingsPanel({
         </div>
 
         <label className="profile-settings__field">
-          <span className="profile-settings__label">Nama tampilan</span>
+          <span className="profile-settings__label">Nama tampilan <span className="profile-settings__required" aria-hidden>*</span></span>
           <input
             type="text"
             className="profile-settings__input"
@@ -168,6 +168,7 @@ export default function ProfileSettingsPanel({
             Batal
           </button>
           <button type="submit" className="profile-settings__submit" disabled={saving || !name.trim()}>
+            {saving && <span className="profile-settings__spinner" aria-hidden />}
             {saving ? 'Menyimpan...' : 'Simpan'}
           </button>
         </div>

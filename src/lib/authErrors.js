@@ -4,11 +4,12 @@ const AUTH_ERROR_MESSAGES = {
   unexpected_failure: 'Gagal membuat akun. Jalankan supabase_fix_signup.sql di Supabase SQL Editor.',
   weak_password: 'Password terlalu lemah. Gunakan minimal 8 karakter.',
   invalid_credentials: 'Email atau password salah.',
-  email_not_confirmed: 'Email belum diverifikasi. Cek inbox Gmail Anda.',
+  email_not_confirmed: 'Email belum diverifikasi. Cek inbox email Anda (termasuk folder spam).',
   signup_disabled: 'Pendaftaran dinonaktifkan. Hubungi admin.',
   over_email_send_rate_limit: 'Terlalu banyak percobaan. Coba lagi nanti.',
   over_request_rate_limit: 'Terlalu banyak percobaan. Coba lagi nanti.',
   bad_json: 'Permintaan tidak valid. Coba lagi.',
+  same_password: 'Password baru harus berbeda dari password lama.',
 };
 
 function isDatabaseSignupFailure(message) {
