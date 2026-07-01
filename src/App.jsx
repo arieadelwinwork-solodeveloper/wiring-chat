@@ -1,13 +1,20 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppRedirect from './components/AppRedirect';
+import PageLoader from './components/PageLoader';
 import UnauthorizedHandler from './components/UnauthorizedHandler';
 import { AuthProvider } from './contexts/AuthContext';
-import InternalChat from './pages/InternalChat';
 import Login from './pages/Login';
-import NotFound from './pages/NotFound';
-import ResetPassword from './pages/ResetPassword';
-import VerifyEmail from './pages/VerifyEmail';
+
+const InternalChat = lazy(() => import('./pages/InternalChat'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+
+function LazyPage({ children }) {
+  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+}
 
 export default function App() {
   return (
@@ -16,13 +23,29 @@ export default function App() {
         <UnauthorizedHandler />
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/verify-email"
+            element={(
+              <LazyPage>
+                <VerifyEmail />
+              </LazyPage>
+            )}
+          />
+          <Route
+            path="/reset-password"
+            element={(
+              <LazyPage>
+                <ResetPassword />
+              </LazyPage>
+            )}
+          />
           <Route
             path="/chat/:roomId"
             element={(
               <ProtectedRoute>
-                <InternalChat />
+                <LazyPage>
+                  <InternalChat />
+                </LazyPage>
               </ProtectedRoute>
             )}
           />
@@ -30,12 +53,21 @@ export default function App() {
             path="/chat"
             element={(
               <ProtectedRoute>
-                <InternalChat />
+                <LazyPage>
+                  <InternalChat />
+                </LazyPage>
               </ProtectedRoute>
             )}
           />
           <Route path="/" element={<AppRedirect />} />
-          <Route path="*" element={<NotFound />} />
+          <Route
+            path="*"
+            element={(
+              <LazyPage>
+                <NotFound />
+              </LazyPage>
+            )}
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -5,6 +5,20 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import './Login.css';
 
+function FieldError({ id, message }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="login-form__field-error" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function fieldDesc(...ids) {
+  const value = ids.filter(Boolean).join(' ');
+  return value || undefined;
+}
+
 function EyeToggle({ show, onToggle, disabled, labelShow, labelHide }) {
   return (
     <button
@@ -50,7 +64,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ password: '', confirm: '', form: '' });
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -66,15 +80,15 @@ export default function ResetPassword() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
+    setFieldErrors({ password: '', confirm: '', form: '' });
 
     if (password.length < 8) {
-      setError('Password minimal 8 karakter.');
+      setFieldErrors({ password: 'Password minimal 8 karakter.', confirm: '', form: '' });
       return;
     }
 
     if (password !== confirm) {
-      setError('Konfirmasi password tidak cocok.');
+      setFieldErrors({ password: '', confirm: 'Konfirmasi password tidak cocok.', form: '' });
       return;
     }
 
@@ -89,7 +103,11 @@ export default function ResetPassword() {
         },
       });
     } catch (err) {
-      setError(err.message || 'Gagal mengubah password. Coba lagi.');
+      setFieldErrors({
+        password: '',
+        confirm: '',
+        form: err.message || 'Gagal mengubah password. Coba lagi.',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -135,20 +153,28 @@ export default function ResetPassword() {
               </Link>
             </div>
           ) : (
-            <form className="login-form" onSubmit={handleSubmit}>
+            <form className="login-form" onSubmit={handleSubmit} noValidate>
               <div className="login-form__field">
-                <span className="login-form__label">Password baru <span className="login-form__required" aria-hidden>*</span></span>
+                <label className="login-form__label" htmlFor="reset-password">
+                  Password baru <span className="login-form__required" aria-hidden>*</span>
+                </label>
                 <div className="login-form__password-wrap">
                   <input
+                    id="reset-password"
                     type={showPassword ? 'text' : 'password'}
                     name="new-password"
                     autoComplete="new-password"
                     placeholder="Minimal 8 karakter"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) => {
+                      setPassword(event.target.value);
+                      if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
+                    }}
                     required
                     disabled={formDisabled}
                     autoFocus
+                    aria-invalid={fieldErrors.password ? true : undefined}
+                    aria-describedby={fieldDesc('reset-password-hint', 'reset-password-error')}
                   />
                   <EyeToggle
                     show={showPassword}
@@ -158,21 +184,30 @@ export default function ResetPassword() {
                     labelHide="Sembunyikan password"
                   />
                 </div>
-                <p className="login-form__hint">Minimal 8 karakter.</p>
+                <p id="reset-password-hint" className="login-form__hint">Minimal 8 karakter.</p>
+                <FieldError id="reset-password-error" message={fieldErrors.password} />
               </div>
 
               <div className="login-form__field">
-                <span className="login-form__label">Konfirmasi password baru <span className="login-form__required" aria-hidden>*</span></span>
+                <label className="login-form__label" htmlFor="reset-confirm">
+                  Konfirmasi password baru <span className="login-form__required" aria-hidden>*</span>
+                </label>
                 <div className="login-form__password-wrap">
                   <input
+                    id="reset-confirm"
                     type={showConfirm ? 'text' : 'password'}
                     name="confirm-password"
                     autoComplete="new-password"
                     placeholder="Ulangi password baru"
                     value={confirm}
-                    onChange={(event) => setConfirm(event.target.value)}
+                    onChange={(event) => {
+                      setConfirm(event.target.value);
+                      if (fieldErrors.confirm) setFieldErrors((prev) => ({ ...prev, confirm: '' }));
+                    }}
                     required
                     disabled={formDisabled}
+                    aria-invalid={fieldErrors.confirm ? true : undefined}
+                    aria-describedby={fieldDesc('reset-confirm-error')}
                   />
                   <EyeToggle
                     show={showConfirm}
@@ -182,9 +217,10 @@ export default function ResetPassword() {
                     labelHide="Sembunyikan konfirmasi password"
                   />
                 </div>
+                <FieldError id="reset-confirm-error" message={fieldErrors.confirm} />
               </div>
 
-              {error && <p className="login-form__error" role="alert">{error}</p>}
+              <FieldError id="reset-form-error" message={fieldErrors.form} />
 
               <button
                 type="submit"

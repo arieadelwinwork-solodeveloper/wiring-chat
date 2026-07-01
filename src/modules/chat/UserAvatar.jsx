@@ -1,9 +1,11 @@
 export default function UserAvatar({ user, className = '', imageClassName = '' }) {
+  const displayName = user?.name?.trim() || 'Pengguna';
+
   if (user?.avatarUrl) {
     return (
       <img
         src={user.avatarUrl}
-        alt=""
+        alt={`Foto profil ${displayName}`}
         className={`user-avatar user-avatar--image ${imageClassName || className}`}
       />
     );
@@ -13,7 +15,8 @@ export default function UserAvatar({ user, className = '', imageClassName = '' }
     <div
       className={`user-avatar user-avatar--initials ${className}`}
       style={{ background: user?.avatarColor ?? '#0a2540' }}
-      aria-hidden
+      role="img"
+      aria-label={`Avatar ${displayName}`}
     >
       {user?.initials ?? '?'}
     </div>

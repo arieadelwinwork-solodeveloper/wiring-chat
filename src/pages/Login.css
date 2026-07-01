@@ -213,6 +213,13 @@
   color: var(--wiring-color-danger);
 }
 
+.login-form__field-error {
+  margin: 6px 0 0;
+  font-size: var(--wiring-font-size-sm);
+  color: var(--wiring-color-danger);
+  line-height: 1.35;
+}
+
 .login-form__submit {
   margin-top: 2px;
   padding: 11px var(--wiring-space-4);

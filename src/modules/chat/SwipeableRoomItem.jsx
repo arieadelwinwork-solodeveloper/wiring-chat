@@ -1,5 +1,6 @@
 import { useSwipeToDelete } from './useSwipeToDelete';
 import { SwipeDeleteAction } from './SwipeDeleteAction';
+import { sanitizeText } from '../../lib/sanitize';
 import './SwipeDelete.css';
 import './SwipeableRoomItem.css';
 
@@ -22,6 +23,9 @@ export default function SwipeableRoomItem({
     onTap: () => onSelect(room.id),
   });
 
+  const roomName = sanitizeText(room.nama_room);
+  const roomPreview = sanitizeText(room.lastMessage);
+
   return (
     <li className={`chat-room-list__item${removing ? ' swipe-delete__row--removing' : ''}`}>
       <div
@@ -35,7 +39,7 @@ export default function SwipeableRoomItem({
           style={{ transform: `translateX(${offset}px)` }}
           role="button"
           tabIndex={0}
-          aria-label={`Buka chat ${room.nama_room}`}
+          aria-label={`Buka chat ${roomName}`}
           onKeyDown={(event) => {
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
@@ -52,13 +56,13 @@ export default function SwipeableRoomItem({
           <div className="chat-room-item__info">
             {showAsBot ? (
               <div className="chat-room-item__name-row">
-                <span className="chat-room-item__name">{room.nama_room}</span>
+                <span className="chat-room-item__name">{roomName}</span>
                 <span className="chat-room-item__bot-badge">{room.statusLabel}</span>
               </div>
             ) : (
-              <div className="chat-room-item__name">{room.nama_room}</div>
+              <div className="chat-room-item__name">{roomName}</div>
             )}
-            <div className="chat-room-item__preview">{room.lastMessage}</div>
+            <div className="chat-room-item__preview">{roomPreview}</div>
           </div>
           {room.lastTime && (
             <span className="chat-room-item__time">{room.lastTime}</span>

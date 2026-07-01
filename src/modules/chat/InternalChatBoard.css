@@ -713,6 +713,29 @@
   padding: 24px;
 }
 
+.chat-ai-processing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 16px 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f2f2f7;
+  color: #636366;
+  font-size: 14px;
+  align-self: flex-start;
+}
+
+.chat-ai-processing__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #c7c7cc;
+  border-top-color: #0a2540;
+  border-radius: 50%;
+  animation: auth-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
 .chat-owner-notice--error {
   background: #fdecea;
   color: #8b1a12;

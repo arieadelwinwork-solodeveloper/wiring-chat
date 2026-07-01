@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { formatMessageTime } from './messageFormat';
+import { sanitizeText } from '../../lib/sanitize';
 import './ChatMessageBubble.css';
 
 const HOLD_MS = 450;
@@ -22,7 +23,8 @@ export default function ChatMessageBubble({
   else if (isAi) modifier = 'ai';
   else modifier = 'staff';
 
-  const senderLabel = isOwn ? currentUserName : message.sender_name;
+  const senderLabel = sanitizeText(isOwn ? currentUserName : message.sender_name);
+  const messageText = sanitizeText(message.teks_pesan);
   const holdTimerRef = useRef(null);
   const startPointRef = useRef({ x: 0, y: 0 });
   const holdTriggeredRef = useRef(false);
@@ -93,7 +95,7 @@ export default function ChatMessageBubble({
         } : undefined}
         aria-pressed={selectionMode ? isSelected : undefined}
       >
-        {message.teks_pesan.split('\n').map((line, i, lines) => (
+        {messageText.split('\n').map((line, i, lines) => (
           <span key={i}>
             {line}
             {i < lines.length - 1 && <br />}

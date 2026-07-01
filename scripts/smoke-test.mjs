@@ -113,7 +113,7 @@ function runCodeAudit() {
   auditChecklist(
     'auth-login-error',
     'Login gagal — pesan error',
-    login.includes('login-form__error') && auth.includes('Periksa email dan password'),
+    login.includes('login-form__field-error') && auth.includes('Periksa email dan password'),
     'Login.jsx + AuthContext',
   );
 

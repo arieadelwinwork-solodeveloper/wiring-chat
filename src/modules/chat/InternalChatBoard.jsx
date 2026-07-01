@@ -43,6 +43,7 @@ import { useChatBackend } from '../../hooks/useChatBackend';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { getOrCreateLocalNomorId } from '../../lib/nomorId';
+import { sanitizeText } from '../../lib/sanitize';
 import {
   chatApi,
   isNetworkErrorMessage,
@@ -241,7 +242,7 @@ function UserProfileMenu({
       >
         <UserAvatar user={user} className="chat-user-profile__avatar" />
         <div className="chat-user-profile__meta">
-          <span className="chat-user-profile__name">{user.name}</span>
+          <span className="chat-user-profile__name">{sanitizeText(user.name)}</span>
           {user.nomorId && (
             <span className="chat-user-profile__id" title="Bagikan ID ini agar teman bisa mengundang Anda">
               {user.nomorId}
@@ -304,6 +305,13 @@ function getInitials(name) {
     .toUpperCase();
 }
 
+function roomExpectsAiReply(room) {
+  if (!room) return false;
+  if (room.isBot) return true;
+  if (room.isGroup && room.aiEnabled) return true;
+  return false;
+}
+
 export default function InternalChatBoard({
   role: defaultRole = 'user',
   initialRoomId = null,
@@ -320,6 +328,7 @@ export default function InternalChatBoard({
   const [notice, setNotice] = useState(null);
   const noticeTimerRef = useRef(null);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [aiProcessing, setAiProcessing] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [botCodeCounter, setBotCodeCounter] = useState(1);
@@ -497,6 +506,7 @@ export default function InternalChatBoard({
 
   useEffect(() => {
     cancelMessageAction();
+    setAiProcessing(false);
   }, [activeRoomId]);
 
   function cancelMessageAction() {
@@ -1122,6 +1132,8 @@ export default function InternalChatBoard({
     const text = draft.trim();
     setDraft('');
     setSendingMessage(true);
+    const expectsAiReply = roomExpectsAiReply(activeRoom);
+    if (expectsAiReply) setAiProcessing(true);
 
     if (backend.useApi) {
       try {
@@ -1133,6 +1145,7 @@ export default function InternalChatBoard({
         setDraft(text);
       } finally {
         setSendingMessage(false);
+        setAiProcessing(false);
       }
       return;
     }
@@ -1336,7 +1349,7 @@ export default function InternalChatBoard({
                 {activeRoom.initials}
               </div>
               <div>
-                <div className="chat-main__header-name">{activeRoom.nama_room}</div>
+                <div className="chat-main__header-name">{sanitizeText(activeRoom.nama_room)}</div>
                 <div className={`chat-main__header-status${
                   activeRoom.isBot || (activeRoom.isGroup && activeRoom.aiEnabled)
                     ? ' chat-main__header-status--bot'
@@ -1358,28 +1371,37 @@ export default function InternalChatBoard({
             <div className={`chat-messages${messageActionMode ? ' chat-messages--selection-mode' : ''}`}>
               {messagesLoading ? (
                 <MessageListSkeleton />
-              ) : messages.length === 0 ? (
-                <div className="chat-messages-empty">Belum ada pesan — kirim sapaan pertama.</div>
               ) : (
-                messageGroups.map((group) => (
-                  <Fragment key={group.dateKey}>
-                    <div className="chat-date-divider">
-                      <span>{group.dateLabel}</span>
+                <>
+                  {messages.length === 0 && !aiProcessing && (
+                    <div className="chat-messages-empty">Belum ada pesan — kirim sapaan pertama.</div>
+                  )}
+                  {messageGroups.map((group) => (
+                    <Fragment key={group.dateKey}>
+                      <div className="chat-date-divider">
+                        <span>{group.dateLabel}</span>
+                      </div>
+                      {group.messages.map((msg) => (
+                        <ChatMessageBubble
+                          key={msg.id}
+                          message={msg}
+                          currentUserName={currentUser.name}
+                          currentUserId="user-me"
+                          selectionMode={Boolean(messageActionMode)}
+                          isSelected={selectedMessageIds.has(msg.id)}
+                          onHold={handleMessageHold}
+                          onToggleSelect={toggleMessageSelection}
+                        />
+                      ))}
+                    </Fragment>
+                  ))}
+                  {aiProcessing && (
+                    <div className="chat-ai-processing" role="status" aria-live="polite">
+                      <span className="chat-ai-processing__spinner" aria-hidden />
+                      AI memproses...
                     </div>
-                    {group.messages.map((msg) => (
-                      <ChatMessageBubble
-                        key={msg.id}
-                        message={msg}
-                        currentUserName={currentUser.name}
-                        currentUserId="user-me"
-                        selectionMode={Boolean(messageActionMode)}
-                        isSelected={selectedMessageIds.has(msg.id)}
-                        onHold={handleMessageHold}
-                        onToggleSelect={toggleMessageSelection}
-                      />
-                    ))}
-                  </Fragment>
-                ))
+                  )}
+                </>
               )}
             </div>
 

@@ -24,13 +24,18 @@ export function filterPromptInjection(req, res, next) {
 }
 
 export function validateAIOutput(output) {
+  const text = String(output ?? '');
   const SENSITIVE = [
     /sk-[a-zA-Z0-9]{20,}/,
-    /eyJ[a-zA-Z0-9]{20,}/,
+    /eyJ[a-zA-Z0-9_-]{20,}/,
+    /SUPABASE_(URL|SERVICE_KEY|ANON_KEY)/i,
+    /DEEPSEEK_API_KEY/i,
+    /ANTHROPIC_API_KEY/i,
+    /Bearer\s+[a-zA-Z0-9._-]{20,}/i,
   ];
-  if (SENSITIVE.some((pattern) => pattern.test(output))) {
+  if (SENSITIVE.some((pattern) => pattern.test(text))) {
     console.error('[SECURITY] AI output contains sensitive data - blocked');
     return 'Terjadi kesalahan, silakan coba lagi.';
   }
-  return output;
+  return text;
 }

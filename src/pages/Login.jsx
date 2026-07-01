@@ -7,6 +7,20 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { DEV_ACCOUNTS, showDevLogin } from '../lib/devAccounts';
 import './Login.css';
 
+function FieldError({ id, message }) {
+  if (!message) return null;
+  return (
+    <p id={id} className="login-form__field-error" role="alert">
+      {message}
+    </p>
+  );
+}
+
+function fieldDesc(...ids) {
+  const value = ids.filter(Boolean).join(' ');
+  return value || undefined;
+}
+
 function EyeToggle({ show, onToggle, disabled, labelShow, labelHide }) {
   return (
     <button
@@ -67,9 +81,9 @@ export default function Login() {
   const [registering, setRegistering] = useState(false);
   const [forgotSending, setForgotSending] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [registerError, setRegisterError] = useState('');
-  const [forgotError, setForgotError] = useState('');
+  const [loginErrors, setLoginErrors] = useState({ email: '', password: '', form: '' });
+  const [registerErrors, setRegisterErrors] = useState({ email: '', password: '', confirm: '' });
+  const [forgotErrors, setForgotErrors] = useState({ email: '', form: '' });
   const [registerSuccess, setRegisterSuccess] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
   const [loginSuccess, setLoginSuccess] = useState(
@@ -130,7 +144,7 @@ export default function Login() {
   }
 
   function openRegisterModal() {
-    setRegisterError('');
+    setRegisterErrors({ email: '', password: '', confirm: '' });
     setRegisterSuccess('');
     setShowRegisterModal(true);
   }
@@ -141,7 +155,7 @@ export default function Login() {
   }
 
   function openForgotModal() {
-    setForgotError('');
+    setForgotErrors({ email: '', form: '' });
     setForgotSuccess('');
     setForgotMode('magic');
     setForgotEmail(email.trim());
@@ -156,11 +170,11 @@ export default function Login() {
   async function handleForgotSend(mode) {
     const trimmedEmail = forgotEmail.trim();
     if (!trimmedEmail) {
-      setForgotError('Masukkan email terdaftar.');
+      setForgotErrors({ email: 'Masukkan email terdaftar.', form: '' });
       return;
     }
 
-    setForgotError('');
+    setForgotErrors({ email: '', form: '' });
     setForgotSuccess('');
     setForgotSending(true);
     setForgotMode(mode);
@@ -174,11 +188,12 @@ export default function Login() {
         setForgotSuccess('Link ubah password telah dikirim. Cek inbox email Anda (termasuk folder spam), buat password baru, lalu masuk kembali. Link berlaku sekali pakai.');
       }
     } catch (err) {
-      setForgotError(
-        err.message || (mode === 'magic'
+      setForgotErrors({
+        email: '',
+        form: err.message || (mode === 'magic'
           ? 'Gagal mengirim magic link. Coba lagi.'
           : 'Gagal mengirim link ubah password. Coba lagi.'),
-      );
+      });
     } finally {
       setForgotSending(false);
     }
@@ -186,43 +201,51 @@ export default function Login() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setError('');
+    setLoginErrors({ email: '', password: '', form: '' });
     setSubmitting(true);
 
     try {
       await signIn(email.trim(), password);
       navigate(postLoginPath, { replace: true });
     } catch (err) {
-      setError(err.message || 'Login gagal. Periksa email dan password.');
+      setLoginErrors({
+        email: '',
+        password: err.message || 'Login gagal. Periksa email dan password.',
+        form: '',
+      });
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleOAppsLogin() {
-    setError('');
+    setLoginErrors({ email: '', password: '', form: '' });
     setOauthLoading(true);
 
     try {
       await signInWithOApps();
     } catch (err) {
-      setError(err.message || 'Gagal masuk dengan akun O\'Apps.');
+      setLoginErrors({
+        email: '',
+        password: '',
+        form: err.message || 'Gagal masuk dengan akun O\'Apps.',
+      });
       setOauthLoading(false);
     }
   }
 
   async function handleRegister(event) {
     event.preventDefault();
-    setRegisterError('');
+    setRegisterErrors({ email: '', password: '', confirm: '' });
     setRegisterSuccess('');
 
     if (registerPassword !== registerConfirm) {
-      setRegisterError('Konfirmasi password tidak cocok.');
+      setRegisterErrors({ email: '', password: '', confirm: 'Konfirmasi password tidak cocok.' });
       return;
     }
 
     if (registerPassword.length < 8) {
-      setRegisterError('Password minimal 8 karakter.');
+      setRegisterErrors({ email: '', password: 'Password minimal 8 karakter.', confirm: '' });
       return;
     }
 
@@ -241,7 +264,11 @@ export default function Login() {
       setShowRegisterModal(false);
       navigate('/verify-email', { replace: true, state: { email: registeredEmail } });
     } catch (err) {
-      setRegisterError(err.message || 'Pendaftaran gagal. Coba email lain.');
+      setRegisterErrors({
+        email: err.message || 'Pendaftaran gagal. Coba email lain.',
+        password: '',
+        confirm: '',
+      });
     } finally {
       setRegistering(false);
     }
@@ -252,7 +279,7 @@ export default function Login() {
   function fillDevAccount(account) {
     setEmail(account.email);
     setPassword(account.password);
-    setError('');
+    setLoginErrors({ email: '', password: '', form: '' });
     setLoginSuccess('');
   }
 
@@ -274,34 +301,49 @@ export default function Login() {
             </p>
           )}
 
-          <form className="login-form" onSubmit={handleSubmit}>
-            <label className="login-form__field">
+          <form className="login-form" onSubmit={handleSubmit} noValidate>
+            <label className="login-form__field" htmlFor="login-email">
               <span>Email <span className="login-form__required" aria-hidden>*</span></span>
               <input
+                id="login-email"
                 type="email"
                 name="email"
                 autoComplete="email"
                 inputMode="email"
                 placeholder="nama@email.com"
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  if (loginErrors.email) setLoginErrors((prev) => ({ ...prev, email: '' }));
+                }}
                 required
                 disabled={formDisabled}
+                aria-invalid={loginErrors.email ? true : undefined}
+                aria-describedby={fieldDesc('login-email-error')}
               />
             </label>
+            <FieldError id="login-email-error" message={loginErrors.email} />
 
             <div className="login-form__field">
-              <span className="login-form__label">Password <span className="login-form__required" aria-hidden>*</span></span>
+              <label className="login-form__label" htmlFor="login-password">
+                Password <span className="login-form__required" aria-hidden>*</span>
+              </label>
               <div className="login-form__password-wrap">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   autoComplete="current-password"
                   placeholder="Masukkan password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  onChange={(event) => {
+                    setPassword(event.target.value);
+                    if (loginErrors.password) setLoginErrors((prev) => ({ ...prev, password: '' }));
+                  }}
                   required
                   disabled={formDisabled}
+                  aria-invalid={loginErrors.password ? true : undefined}
+                  aria-describedby={fieldDesc('login-password-error')}
                 />
                 <EyeToggle
                   show={showPassword}
@@ -319,13 +361,14 @@ export default function Login() {
               >
                 Lupa password?
               </button>
+              <FieldError id="login-password-error" message={loginErrors.password} />
             </div>
 
             {loginSuccess && (
               <p className="login-form__success" role="status">{loginSuccess}</p>
             )}
 
-            {error && <p className="login-form__error" role="alert">{error}</p>}
+            <FieldError id="login-form-error" message={loginErrors.form} />
 
             <button
               type="submit"
@@ -408,35 +451,50 @@ export default function Login() {
 
             <p className="login-modal__subtitle">Buat akun baru dengan email dan password.</p>
 
-            <form className="login-form login-form--register" onSubmit={handleRegister}>
-              <label className="login-form__field">
+            <form className="login-form login-form--register" onSubmit={handleRegister} noValidate>
+              <label className="login-form__field" htmlFor="register-email">
                 <span>Email <span className="login-form__required" aria-hidden>*</span></span>
                 <input
+                  id="register-email"
                   type="email"
                   name="register-email"
                   autoComplete="email"
                   inputMode="email"
                   placeholder="nama@email.com"
                   value={registerEmail}
-                  onChange={(event) => setRegisterEmail(event.target.value)}
+                  onChange={(event) => {
+                    setRegisterEmail(event.target.value);
+                    if (registerErrors.email) setRegisterErrors((prev) => ({ ...prev, email: '' }));
+                  }}
                   required
                   disabled={formDisabled}
                   autoFocus
+                  aria-invalid={registerErrors.email ? true : undefined}
+                  aria-describedby={fieldDesc('register-email-error')}
                 />
               </label>
+              <FieldError id="register-email-error" message={registerErrors.email} />
 
               <div className="login-form__field">
-                <span className="login-form__label">Password <span className="login-form__required" aria-hidden>*</span></span>
+                <label className="login-form__label" htmlFor="register-password">
+                  Password <span className="login-form__required" aria-hidden>*</span>
+                </label>
                 <div className="login-form__password-wrap">
                   <input
+                    id="register-password"
                     type={showRegisterPassword ? 'text' : 'password'}
                     name="register-password"
                     autoComplete="new-password"
                     placeholder="Minimal 8 karakter"
                     value={registerPassword}
-                    onChange={(event) => setRegisterPassword(event.target.value)}
+                    onChange={(event) => {
+                      setRegisterPassword(event.target.value);
+                      if (registerErrors.password) setRegisterErrors((prev) => ({ ...prev, password: '' }));
+                    }}
                     required
                     disabled={formDisabled}
+                    aria-invalid={registerErrors.password ? true : undefined}
+                    aria-describedby={fieldDesc('register-password-hint', 'register-password-error')}
                   />
                   <EyeToggle
                     show={showRegisterPassword}
@@ -446,21 +504,30 @@ export default function Login() {
                     labelHide="Sembunyikan password"
                   />
                 </div>
-                <p className="login-form__hint">Minimal 8 karakter.</p>
+                <p id="register-password-hint" className="login-form__hint">Minimal 8 karakter.</p>
+                <FieldError id="register-password-error" message={registerErrors.password} />
               </div>
 
               <div className="login-form__field">
-                <span className="login-form__label">Konfirmasi password <span className="login-form__required" aria-hidden>*</span></span>
+                <label className="login-form__label" htmlFor="register-confirm">
+                  Konfirmasi password <span className="login-form__required" aria-hidden>*</span>
+                </label>
                 <div className="login-form__password-wrap">
                   <input
+                    id="register-confirm"
                     type={showRegisterConfirm ? 'text' : 'password'}
                     name="register-confirm"
                     autoComplete="new-password"
                     placeholder="Ulangi password"
                     value={registerConfirm}
-                    onChange={(event) => setRegisterConfirm(event.target.value)}
+                    onChange={(event) => {
+                      setRegisterConfirm(event.target.value);
+                      if (registerErrors.confirm) setRegisterErrors((prev) => ({ ...prev, confirm: '' }));
+                    }}
                     required
                     disabled={formDisabled}
+                    aria-invalid={registerErrors.confirm ? true : undefined}
+                    aria-describedby={fieldDesc('register-confirm-error')}
                   />
                   <EyeToggle
                     show={showRegisterConfirm}
@@ -470,11 +537,8 @@ export default function Login() {
                     labelHide="Sembunyikan konfirmasi password"
                   />
                 </div>
+                <FieldError id="register-confirm-error" message={registerErrors.confirm} />
               </div>
-
-              {registerError && (
-                <p className="login-form__error" role="alert">{registerError}</p>
-              )}
 
               {registerSuccess && (
                 <>
@@ -540,21 +604,28 @@ export default function Login() {
                 handleForgotSend(forgotMode);
               }}
             >
-              <label className="login-form__field">
+              <label className="login-form__field" htmlFor="forgot-email">
                 <span>Email <span className="login-form__required" aria-hidden>*</span></span>
                 <input
+                  id="forgot-email"
                   type="email"
                   name="forgot-email"
                   autoComplete="email"
                   inputMode="email"
                   placeholder="nama@email.com"
                   value={forgotEmail}
-                  onChange={(event) => setForgotEmail(event.target.value)}
+                  onChange={(event) => {
+                    setForgotEmail(event.target.value);
+                    if (forgotErrors.email) setForgotErrors((prev) => ({ ...prev, email: '' }));
+                  }}
                   required
                   disabled={formDisabled}
                   autoFocus
+                  aria-invalid={forgotErrors.email ? true : undefined}
+                  aria-describedby={fieldDesc('forgot-email-error', 'forgot-form-error')}
                 />
               </label>
+              <FieldError id="forgot-email-error" message={forgotErrors.email} />
 
               <fieldset className="login-forgot-options" disabled={formDisabled || Boolean(forgotSuccess)}>
                 <legend className="login-forgot-options__legend">Pilih metode</legend>
@@ -590,9 +661,7 @@ export default function Login() {
                 </label>
               </fieldset>
 
-              {forgotError && (
-                <p className="login-form__error" role="alert">{forgotError}</p>
-              )}
+              <FieldError id="forgot-form-error" message={forgotErrors.form} />
 
               {forgotSuccess && (
                 <p className="login-form__success" role="status">{forgotSuccess}</p>

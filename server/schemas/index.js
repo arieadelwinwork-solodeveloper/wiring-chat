@@ -1,5 +1,12 @@
 import { z } from 'zod';
 import { AVAILABLE_LLM_VALUES } from '../config/llm.js';
+import { sanitizePlainText } from '../lib/sanitize.js';
+
+const plainText = (max) => z
+  .string()
+  .max(max)
+  .transform((value) => sanitizePlainText(value, max))
+  .refine((value) => value.length >= 1, { message: 'Tidak boleh kosong' });
 
 const availableLlmSchema = z.string().refine(
   (val) => AVAILABLE_LLM_VALUES.includes(val),
@@ -7,7 +14,12 @@ const availableLlmSchema = z.string().refine(
 );
 
 export const updateProfileSchema = z.object({
-  display_name: z.string().min(1).max(100).optional(),
+  display_name: z.string().max(100).optional()
+    .transform((value) => {
+      if (value == null) return undefined;
+      const cleaned = sanitizePlainText(value, 100);
+      return cleaned || undefined;
+    }),
   avatar_color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   avatar_url: z.union([z.string().url(), z.literal('')]).nullable().optional(),
 });
@@ -23,7 +35,7 @@ export const nomorIdLookupParamSchema = z.object({
 });
 
 export const createContactSchema = z.object({
-  nama: z.string().min(1).max(200),
+  nama: plainText(200),
   nomor_id: z.string().min(1).max(50),
   status: z.enum(['owner', 'user', 'bot', 'ai_assistant']).default('user'),
 });
@@ -36,7 +48,7 @@ const knowledgeFileSchema = z.object({
 });
 
 export const createGroupSchema = z.object({
-  nama: z.string().min(1).max(200),
+  nama: plainText(200),
   member_ids: z.array(z.string().min(1)).min(1),
   ai_enabled: z.boolean().default(false),
   llm: z.string().optional(),
@@ -80,24 +92,24 @@ const faqItemSchema = z.object({
 });
 
 export const createFaqBotSchema = z.object({
-  nama: z.string().min(1).max(200),
+  nama: plainText(200),
   kode_id: z.string().min(1).max(50),
   categories: z.array(faqCategorySchema),
   faqs: z.array(faqItemSchema).min(1),
 });
 
 export const createAiAssistantSchema = z.object({
-  nama: z.string().min(1).max(200),
+  nama: plainText(200),
   llm: availableLlmSchema,
   knowledge_files: z.array(knowledgeFileSchema).min(1),
 });
 
 export const sendMessageSchema = z.object({
-  teks_pesan: z.string().min(1).max(10000),
+  teks_pesan: plainText(10000),
 });
 
 export const aiChatSchema = z.object({
-  message: z.string().min(1).max(10000),
+  message: plainText(10000),
   room_id: z.string().min(1).max(128).regex(/^[a-zA-Z0-9_-]+$/).optional(),
 });
 
